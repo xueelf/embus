@@ -1,0 +1,21 @@
+{
+  "name": "embus",
+  "version": "0.0.0",
+  "description": "A lightweight JavaScript HTTP client based on Fetch API",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node dist/index.js",
+    "build": "node scripts/esbuild/build.mjs"
+  },
+  "keywords": [],
+  "author": "Yuki <admin@yuki.sh>",
+  "license": "MIT",
+  "devDependencies": {
+    "arg": "^5.0.2",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.3"
+  }
+}
