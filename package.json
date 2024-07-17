@@ -2,13 +2,15 @@
   "name": "embus",
   "version": "0.0.0",
   "description": "A lightweight JavaScript HTTP client based on Fetch API",
+  "type": "module",
   "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
   "engines": {
     "node": ">=18.0.0"
   },
+  "packageManager": "pnpm@9.5.0",
   "scripts": {
-    "test": "node dist/index.js",
-    "build": "node scripts/esbuild/build.mjs"
+    "build": "node scripts/esbuild/build.js"
   },
   "keywords": [],
   "author": "Yuki <admin@yuki.sh>",
