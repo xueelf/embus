@@ -32,22 +32,31 @@ export class EmbusError extends Error {
 class Embus {
   constructor() {}
 
-  async request<T>(config: Config): Promise<Result<T>> {
-    config.method ??= 'GET';
-    config.responseType ??= 'json';
+  async request<T>(config: Config): Promise<Result<T>>;
+  async request<T>(url: string, config?: Omit<Config, 'url'>): Promise<Result<T>>;
+  async request<T>(option: string | Config, config?: Omit<Config, 'url'>): Promise<Result<T>> {
+    const defaultConfig: Partial<Config> = {
+      method: 'GET',
+      responseType: 'json',
+    };
 
-    const url = (config.origin ?? '') + config.url;
-    const response = await fetch(url, config);
+    if (typeof option === 'string') {
+      Object.assign(defaultConfig, { url: option }, config);
+    } else {
+      Object.assign(defaultConfig, option);
+    }
+    const url = (defaultConfig.origin ?? '') + defaultConfig.url;
+    const response = await fetch(url, defaultConfig);
     const result: Result = {
       data: null,
       status: response.status,
-      config,
+      config: <Config>defaultConfig,
       statusText: response.statusText,
       headers: response.headers,
     };
 
     try {
-      switch (config.responseType) {
+      switch (defaultConfig.responseType) {
         case 'arraybuffer':
           result.data = await response.arrayBuffer();
           break;
@@ -91,7 +100,7 @@ function createInstance(): EmbusInstance {
   for (const key of keys) {
     Reflect.set(instance, key, context[key]);
   }
-  return <EmbusInstance>instance;
+  return instance as unknown as EmbusInstance;
 }
 
 const embus = createInstance();
