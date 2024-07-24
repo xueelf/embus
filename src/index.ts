@@ -1,56 +1,78 @@
-import { parseError } from '@/utils';
+import { parseBody, parseError, parseParams } from '@/utils';
 
-interface Config extends RequestInit {
+interface RequestConfig extends RequestInit {
   url: string;
   origin?: string;
   method?: Method;
   responseType?: ResponseType;
 }
+type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body'>;
 
 type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
 
 interface Result<T = unknown> {
   data: T;
-  /** 请求配置项 */
-  config: Config;
-  /** 响应状态码 */
+  config: RequestConfig;
   status: number;
-  /** 状态码消息 */
   statusText: string;
-  /** 请求头 */
   headers: Headers;
 }
 
-export class EmbusError extends Error {
+class EmbusError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'EmbusError';
   }
 }
 
-class Embus {
-  constructor() {}
+export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
+export type ResponseInterceptor<T = unknown> = (result: Result<T>) => Result | Promise<Result>;
 
-  async request<T>(config: Config): Promise<Result<T>>;
-  async request<T>(url: string, config?: Omit<Config, 'url'>): Promise<Result<T>>;
-  async request<T>(option: string | Config, config?: Omit<Config, 'url'>): Promise<Result<T>> {
-    const defaultConfig: Partial<Config> = {
+export class Embus {
+  private requestInterceptors: RequestInterceptor[];
+  private responseInterceptors: ResponseInterceptor[];
+
+  constructor() {
+    this.requestInterceptors = [];
+    this.responseInterceptors = [];
+  }
+
+  public useRequestInterceptor(interceptor: RequestInterceptor): void {
+    this.requestInterceptors.push(interceptor);
+  }
+
+  public useResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void {
+    this.responseInterceptors.push(<ResponseInterceptor>interceptor);
+  }
+
+  public async request<T>(config: RequestConfig): Promise<Result<T>>;
+  public async request<T>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
+  public async request<T>(
+    init: string | RequestConfig,
+    config?: Omit<RequestConfig, 'url'>,
+  ): Promise<Result<T>> {
+    const defaultConfig: Partial<RequestConfig> = {
       method: 'GET',
       responseType: 'json',
     };
 
-    if (typeof option === 'string') {
-      Object.assign(defaultConfig, { url: option }, config);
+    if (typeof init === 'string') {
+      Object.assign(defaultConfig, { url: init }, config);
     } else {
-      Object.assign(defaultConfig, option);
+      Object.assign(defaultConfig, init, config);
     }
+
+    for (const interceptor of this.requestInterceptors) {
+      Object.assign(defaultConfig, await interceptor(<RequestConfig>defaultConfig));
+    }
+
     const url = (defaultConfig.origin ?? '') + defaultConfig.url;
     const response = await fetch(url, defaultConfig);
     const result: Result = {
       data: null,
       status: response.status,
-      config: <Config>defaultConfig,
+      config: <RequestConfig>defaultConfig,
       statusText: response.statusText,
       headers: response.headers,
     };
@@ -78,14 +100,67 @@ class Embus {
         throw new EmbusError(parseError(error));
       }
     }
+
+    for (const interceptor of this.responseInterceptors) {
+      await interceptor(result);
+    }
     return <Result<T>>result;
   }
-  async get() {}
-  async delete() {}
-  async head() {}
-  async post() {}
-  async put() {}
-  async patch() {}
+
+  public get<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+    if (data) {
+      url += (/\?/.test(url) ? '&' : '?') + parseParams(data);
+    }
+
+    return this.request<T>({
+      url,
+      method: 'GET',
+      ...options,
+    });
+  }
+
+  public delete<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+    return this.request<T>({
+      url,
+      method: 'DELETE',
+      body: parseBody(data),
+      ...options,
+    });
+  }
+
+  public head<T = null>(url: string): Promise<Result<T>> {
+    return this.request<T>({
+      url,
+      method: 'HEAD',
+    });
+  }
+
+  public post<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+    return this.request<T>({
+      url,
+      method: 'POST',
+      body: parseBody(data),
+      ...options,
+    });
+  }
+
+  public put<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+    return this.request<T>({
+      url,
+      method: 'PUT',
+      body: parseBody(data),
+      ...options,
+    });
+  }
+
+  public patch<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+    return this.request<T>({
+      url,
+      method: 'PATCH',
+      body: parseBody(data),
+      ...options,
+    });
+  }
 }
 
 interface EmbusInstance extends Embus {
