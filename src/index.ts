@@ -7,7 +7,6 @@ interface RequestConfig extends RequestInit {
   responseType?: ResponseType;
 }
 type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body'>;
-
 type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
 
@@ -30,10 +29,12 @@ export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Prom
 export type ResponseInterceptor<T = unknown> = (result: Result<T>) => Result | Promise<Result>;
 
 export class Embus {
+  private options?: RequestOptions;
   private requestInterceptors: RequestInterceptor[];
   private responseInterceptors: ResponseInterceptor[];
 
-  constructor() {
+  constructor(options: RequestOptions = {}) {
+    this.options = options;
     this.requestInterceptors = [];
     this.responseInterceptors = [];
   }
@@ -46,16 +47,23 @@ export class Embus {
     this.responseInterceptors.push(<ResponseInterceptor>interceptor);
   }
 
+  public create(options: RequestOptions): EmbusInstance {
+    return createInstance(new Embus(options));
+  }
+
   public async request<T>(config: RequestConfig): Promise<Result<T>>;
   public async request<T>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
   public async request<T>(
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
   ): Promise<Result<T>> {
-    const defaultConfig: Partial<RequestConfig> = {
-      method: 'GET',
-      responseType: 'json',
-    };
+    const defaultConfig: Partial<RequestConfig> = Object.assign(
+      {
+        method: <Method>'GET',
+        responseType: <ResponseType>'json',
+      },
+      this.options,
+    );
 
     if (typeof init === 'string') {
       Object.assign(defaultConfig, { url: init }, config);
@@ -167,17 +175,17 @@ interface EmbusInstance extends Embus {
   (...args: Parameters<Embus['request']>): ReturnType<Embus['request']>;
 }
 
-function createInstance(): EmbusInstance {
-  const context = new Embus();
+function createInstance(context: Embus): EmbusInstance {
   const instance = Embus.prototype.request.bind(context);
   const keys = <Array<keyof Embus>>Object.getOwnPropertyNames(Embus.prototype);
 
   for (const key of keys) {
-    Reflect.set(instance, key, context[key]);
+    Reflect.set(instance, key, context[key].bind(context));
   }
   return instance as unknown as EmbusInstance;
 }
 
-const embus = createInstance();
+const context = new Embus();
+const embus = createInstance(context);
 
 export default embus;
