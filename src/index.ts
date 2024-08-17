@@ -1,16 +1,16 @@
-import { parseBody, parseError, parseParams } from '@/utils';
+import { parseBody, parseError, paramsToString, assignDeep } from '@/utils';
 
-interface RequestConfig extends RequestInit {
+export interface RequestConfig extends RequestInit {
   url: string;
   origin?: string;
   method?: Method;
   responseType?: ResponseType;
 }
-type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body'>;
-type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
-type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
+export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body'>;
+export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
+export type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
 
-interface Result<T = unknown> {
+export interface Result<T = unknown> {
   data: T;
   config: RequestConfig;
   status: number;
@@ -57,30 +57,37 @@ export class Embus {
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
   ): Promise<Result<T>> {
-    const defaultConfig: Partial<RequestConfig> = Object.assign(
+    const defaultConfig = assignDeep<RequestConfig>(
       {
-        method: <Method>'GET',
-        responseType: <ResponseType>'json',
+        method: 'GET',
+        responseType: 'json',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
       this.options,
     );
 
-    if (typeof init === 'string') {
-      Object.assign(defaultConfig, { url: init }, config);
-    } else {
-      Object.assign(defaultConfig, init, config);
+    switch (typeof init) {
+      case 'string':
+        assignDeep(defaultConfig, { url: init }, config);
+        break;
+      case 'object':
+        assignDeep(defaultConfig, init, config);
+        break;
+      default:
+        throw new EmbusError('Invalid arguments');
     }
 
     for (const interceptor of this.requestInterceptors) {
-      Object.assign(defaultConfig, await interceptor(<RequestConfig>defaultConfig));
+      assignDeep(defaultConfig, await interceptor(defaultConfig));
     }
-
     const url = (defaultConfig.origin ?? '') + defaultConfig.url;
     const response = await fetch(url, defaultConfig);
     const result: Result = {
       data: null,
       status: response.status,
-      config: <RequestConfig>defaultConfig,
+      config: defaultConfig,
       statusText: response.statusText,
       headers: response.headers,
     };
@@ -117,7 +124,7 @@ export class Embus {
 
   public get<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
     if (data) {
-      url += (/\?/.test(url) ? '&' : '?') + parseParams(data);
+      url += (/\?/.test(url) ? '&' : '?') + paramsToString(data);
     }
 
     return this.request<T>({
