@@ -39,6 +39,13 @@ export class Embus {
     this.responseInterceptors = [];
   }
 
+  private parseUrl(url: string, data?: object | null): string {
+    if (data) {
+      url += (/\?/.test(url) ? '&' : '?') + paramsToString(data);
+    }
+    return url;
+  }
+
   public useRequestInterceptor(interceptor: RequestInterceptor): void {
     this.requestInterceptors.push(interceptor);
   }
@@ -122,19 +129,23 @@ export class Embus {
     return <Result<T>>result;
   }
 
-  public get<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
-    if (data) {
-      url += (/\?/.test(url) ? '&' : '?') + paramsToString(data);
-    }
-
+  public get<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
-      url,
+      url: this.parseUrl(url, data),
       method: 'GET',
       ...options,
     });
   }
 
-  public delete<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+  public delete<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'DELETE',
@@ -143,14 +154,23 @@ export class Embus {
     });
   }
 
-  public head<T = null>(url: string): Promise<Result<T>> {
+  public head<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
-      url,
+      url: this.parseUrl(url, data),
       method: 'HEAD',
+      ...options,
     });
   }
 
-  public post<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+  public post<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'POST',
@@ -159,7 +179,11 @@ export class Embus {
     });
   }
 
-  public put<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+  public put<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'PUT',
@@ -168,7 +192,11 @@ export class Embus {
     });
   }
 
-  public patch<T>(url: string, data?: object, options: RequestOptions = {}): Promise<Result<T>> {
+  public patch<T>(
+    url: string,
+    data?: object | null,
+    options: RequestOptions = {},
+  ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'PATCH',

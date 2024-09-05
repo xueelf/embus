@@ -74,12 +74,12 @@ const result = await embus('/ping');
 ## API
 
 **embus(init, config?)**  
-**embus.get(url, data?)**  
-**embus.post(url, data?)**  
-**embus.put(url, data?)**  
-**embus.patch(url, data?)**  
-**embus.head(url, data?)**  
-**embus.delete(url, data?)**  
+**embus.get(url, data?, options?)**  
+**embus.post(url, data?, options?)**  
+**embus.put(url, data?, options?)**  
+**embus.patch(url, data?, options?)**  
+**embus.head(url, data?, options?)**  
+**embus.delete(url, data?, options?)**  
 **embus.create(options?)**  
 **embus.useRequestInterceptor(callback?)**  
 **embus.useResponseInterceptor(callback?)**
@@ -98,3 +98,7 @@ The request configuration items are exactly the same as fetch, and the following
   responseType: 'json', // default
 }
 ```
+
+## About
+
+Embus is the romanization of the Japanese word "取って", which is exactly Fetch in English, and "embus" is also very similar to "tote", so I used it as the name of the project.

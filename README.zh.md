@@ -74,12 +74,12 @@ const result = await embus('/ping');
 ## API
 
 **embus(init, config?)**  
-**embus.get(url, data?)**  
-**embus.post(url, data?)**  
-**embus.put(url, data?)**  
-**embus.patch(url, data?)**  
-**embus.head(url, data?)**  
-**embus.delete(url, data?)**  
+**embus.get(url, data?, options?)**  
+**embus.post(url, data?, options?)**  
+**embus.put(url, data?, options?)**  
+**embus.patch(url, data?, options?)**  
+**embus.head(url, data?, options?)**  
+**embus.delete(url, data?, options?)**  
 **embus.create(options?)**  
 **embus.useRequestInterceptor(callback?)**  
 **embus.useResponseInterceptor(callback?)**
@@ -98,3 +98,7 @@ const result = await embus('/ping');
   responseType: 'json', // 默认值
 }
 ```
+
+## 关于
+
+Embus 是日语「取って」的罗马音，其英语正是 Fetch，而且「embus」也和 「tote」非常相似，我便将其用做了该项目的名字。

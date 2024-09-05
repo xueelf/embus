@@ -22,7 +22,7 @@ export function assignDeep<T extends object>(target: any, ...sources: unknown[])
   return target;
 }
 
-export function parseBody(params?: object): Required<RequestInit['body']> {
+export function parseBody(params?: object | null): Required<RequestInit['body']> {
   if (!params) {
     return;
   }

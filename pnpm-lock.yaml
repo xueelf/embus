@@ -7,19 +7,23 @@ settings:
 importers:
 
   .:
+    dependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.5.4
     devDependencies:
-      arg:
-        specifier: ^5.0.2
-        version: 5.0.2
+      '@types/node':
+        specifier: ^22.5.3
+        version: 22.5.3
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
       esbuild:
         specifier: ^0.23.1
         version: 0.23.1
-      typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.0
 
 packages:
 
@@ -167,8 +171,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  arg@5.0.2:
-    resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
+  '@types/node@22.5.3':
+    resolution: {integrity: sha512-njripolh85IA9SQGTAqbmnNZTdxv7X/4OYGPz8tgy5JDr8MP+uDBa921GpYEoDDnwm0Hmn5ZPeJgiiSTPoOzkQ==}
 
   chalk@5.3.0:
     resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
@@ -179,10 +183,29 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  fsevents@2.3.3:
+    resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
+  get-tsconfig@4.8.0:
+    resolution: {integrity: sha512-Pgba6TExTZ0FJAn1qkJAjIeKoDJ3CsI2ChuLohJnZl/tTU8MVrq3b+2t5UOPfRa4RMsorClBjJALkJUMjG1PAw==}
+
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
+  tsx@4.19.0:
+    resolution: {integrity: sha512-bV30kM7bsLZKZIOCHeMNVMJ32/LuJzLVajkQI/qf92J2Qr08ueLQvW00PUZGiuLPP760UINwupgUj8qrSCPUKg==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
   typescript@5.5.4:
     resolution: {integrity: sha512-Mtq29sKDAEYP7aljRgtPOpTvOfbwRWlS6dPRzwjdE+C0R4brX/GUyhHSecbHMFLNBLcJIPt9nl9yG5TZ1weH+Q==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
 
 snapshots:
 
@@ -258,7 +281,9 @@ snapshots:
   '@esbuild/win32-x64@0.23.1':
     optional: true
 
-  arg@5.0.2: {}
+  '@types/node@22.5.3':
+    dependencies:
+      undici-types: 6.19.8
 
   chalk@5.3.0: {}
 
@@ -289,4 +314,22 @@ snapshots:
       '@esbuild/win32-ia32': 0.23.1
       '@esbuild/win32-x64': 0.23.1
 
+  fsevents@2.3.3:
+    optional: true
+
+  get-tsconfig@4.8.0:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+
+  resolve-pkg-maps@1.0.0: {}
+
+  tsx@4.19.0:
+    dependencies:
+      esbuild: 0.23.1
+      get-tsconfig: 4.8.0
+    optionalDependencies:
+      fsevents: 2.3.3
+
   typescript@5.5.4: {}
+
+  undici-types@6.19.8: {}
