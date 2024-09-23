@@ -4,7 +4,7 @@ import { type AddressInfo } from 'node:net';
 export function createTestServer(): Promise<string> {
   const server = createServer((request, response) => {
     const { method, url } = request;
-    console.log(`${method} ${url}`);
+
     switch (`${method} ${url}`) {
       case 'GET /get':
       case 'DELETE /delete':
@@ -19,14 +19,14 @@ export function createTestServer(): Promise<string> {
       case 'POST /echo/post':
       case 'PUT /echo/put':
       case 'PATCH /echo/patch':
-        let body: string = '';
+        let rawData: string = '';
 
         request.on('data', chunk => {
-          body += chunk;
+          rawData += chunk;
         });
         request.on('end', () => {
           response.writeHead(200, { 'Content-Type': 'application/json' });
-          response.end(body);
+          response.end(rawData);
         });
         break;
       default:
