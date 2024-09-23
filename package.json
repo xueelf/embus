@@ -1,6 +1,6 @@
 {
   "name": "embus",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A lightweight JavaScript HTTP client based on Fetch API",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
   "files": [
     "dist"
   ],
-  "packageManager": "pnpm@9.9.0",
+  "packageManager": "pnpm@9.11.0",
   "scripts": {
     "build": "tsx scripts/esbuild/build.ts",
     "test": "tsx scripts/test/main.ts"
@@ -34,10 +34,10 @@
   },
   "homepage": "https://github.com/xueelf/embus#readme",
   "devDependencies": {
-    "@types/node": "^22.5.3",
+    "@types/node": "^20.16.5",
     "chalk": "^5.3.0",
     "esbuild": "^0.23.1",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.1"
   },
   "peerDependencies": {
     "typescript": "^5.5.4"

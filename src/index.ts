@@ -1,12 +1,14 @@
-import { parseBody, parseError, paramsToString, assignDeep } from '@/utils';
+import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from '@/utils';
 
 export interface RequestConfig extends RequestInit {
   url: string;
   origin?: string;
   method?: Method;
+  headers?: Record<string, string>;
+  payload?: object | null;
   responseType?: ResponseType;
 }
-export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body'>;
+export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body' | 'payload'>;
 export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 export type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
 
@@ -26,10 +28,12 @@ class EmbusError extends Error {
 }
 
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-export type ResponseInterceptor<T = unknown> = (result: Result<T>) => Result | Promise<Result>;
+export type ResponseInterceptor<T = unknown, R extends Result<T> = Result<T>> = (
+  result: R,
+) => void | R | Promise<void | R>;
 
 export class Embus {
-  private options?: RequestOptions;
+  private options: RequestOptions;
   private requestInterceptors: RequestInterceptor[];
   private responseInterceptors: ResponseInterceptor[];
 
@@ -37,13 +41,48 @@ export class Embus {
     this.options = options;
     this.requestInterceptors = [];
     this.responseInterceptors = [];
+
+    this.useRequestInterceptor(config => {
+      config.method ??= 'GET';
+      config.responseType ??= 'json';
+      config.headers = assignDeep<Record<string, string>>(
+        {
+          'Content-Type': 'application/json',
+        },
+        config.headers,
+      );
+      this.parseBody(config);
+
+      return config;
+    });
   }
 
-  private parseUrl(url: string, data?: object | null): string {
-    if (data) {
-      url += (/\?/.test(url) ? '&' : '?') + paramsToString(data);
+  private parseUrl(config: RequestConfig): string {
+    let url: string = (config.origin ?? '') + config.url;
+
+    if (config.method === 'GET') {
+      url += (/\?/.test(url) ? '&' : '?') + paramsToString(config.payload);
     }
     return url;
+  }
+
+  private parseBody(config: RequestConfig): RequestConfig {
+    const { body, method, payload } = config;
+
+    if (method === 'GET' || body || !payload) {
+      return config;
+    }
+    // const has_blob = Object.entries(payload).some(([_, value]) => value instanceof Blob);
+
+    switch (config.headers?.['Content-Type']) {
+      case 'application/json':
+        config.body = JSON.stringify(payload);
+        break;
+      case 'multipart/form-data':
+        config.body = objectToFormData(payload);
+        break;
+    }
+    return config;
   }
 
   public useRequestInterceptor(interceptor: RequestInterceptor): void {
@@ -64,32 +103,25 @@ export class Embus {
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
   ): Promise<Result<T>> {
-    const defaultConfig = assignDeep<RequestConfig>(
-      {
-        method: 'GET',
-        responseType: 'json',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-      this.options,
-    );
+    const defaultConfig = cloneDeep(this.options) as RequestConfig;
 
     switch (typeof init) {
       case 'string':
         assignDeep(defaultConfig, { url: init }, config);
         break;
       case 'object':
-        assignDeep(defaultConfig, init, config);
+        assignDeep(defaultConfig, init);
         break;
       default:
         throw new EmbusError('Invalid arguments');
     }
+    const req_interceptor_count = this.requestInterceptors.length;
 
-    for (const interceptor of this.requestInterceptors) {
+    for (let index = 0; index < req_interceptor_count; index++) {
+      const interceptor = this.requestInterceptors[index];
       assignDeep(defaultConfig, await interceptor(defaultConfig));
     }
-    const url = (defaultConfig.origin ?? '') + defaultConfig.url;
+    const url = this.parseUrl(defaultConfig);
     const response = await fetch(url, defaultConfig);
     const result: Result = {
       data: null,
@@ -122,85 +154,94 @@ export class Embus {
         throw new EmbusError(parseError(error));
       }
     }
+    const res_interceptor_count = this.responseInterceptors.length;
 
-    for (const interceptor of this.responseInterceptors) {
-      await interceptor(result);
+    for (let index = 0; index < res_interceptor_count; index++) {
+      const interceptor = this.responseInterceptors[index];
+      const ripeData = await interceptor(result);
+
+      if (!ripeData) {
+        continue;
+      }
+      result.data = ripeData;
     }
     return <Result<T>>result;
   }
 
   public get<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
-      url: this.parseUrl(url, data),
+      url,
       method: 'GET',
+      payload,
       ...options,
     });
   }
 
   public delete<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'DELETE',
-      body: parseBody(data),
+      payload,
       ...options,
     });
   }
 
   public head<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
-      url: this.parseUrl(url, data),
+      url,
       method: 'HEAD',
+      payload,
       ...options,
     });
   }
 
   public post<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'POST',
-      body: parseBody(data),
+      payload,
       ...options,
     });
   }
 
   public put<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'PUT',
-      body: parseBody(data),
+      payload,
       ...options,
     });
   }
 
   public patch<T>(
     url: string,
-    data?: object | null,
+    payload?: object | null,
     options: RequestOptions = {},
   ): Promise<Result<T>> {
     return this.request<T>({
       url,
       method: 'PATCH',
-      body: parseBody(data),
+      payload,
       ...options,
     });
   }

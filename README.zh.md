@@ -45,57 +45,101 @@ npm install embus
 ```javascript
 import embus from 'embus';
 
-const result = await embus('https://api.yuki.sh/ping');
-
-console.log(result);
-// -> { status: 200, data: 'Ciallo～(∠·ω< )⌒★', ... }
+// Request GET
+const result1 = await embus('https://example.org/products.json');
+// Request POST
+const result2 = await embus.post('https://example.org/post', {
+  username: 'example',
+});
+// Request FormData
+const result3 = await embus.post(
+  'https://example.org/post',
+  {
+    username: 'example',
+  },
+  {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  },
+);
 ```
 
-你还可以使用 class 或者 create 来创建新的实体：
+与 `fetch` 相比，`embus` 提供的 API 更加简便、灵活。
+
+```javascript
+// GET Request
+const response1 = await fetch('https://example.org/products.json');
+const json1 = await response1.json();
+
+// POST Request
+const response2 = await fetch('https://example.org/post', {
+  method: 'POST',
+  body: JSON.stringify({
+    username: 'example',
+  }),
+});
+const json2 = await response2.json();
+
+// Request FormData
+const formData = new FormData();
+formData.append('username', 'example');
+
+const response3 = await fetch('https://example.org/post', {
+  method: 'POST',
+  body: formData,
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
+const json3 = await response3.json();
+```
+
+你还可以使用 `Embus` 类或者 `create` 来构建新的实例：
 
 ```javascript
 import embus from 'embus';
 
 const request = embus.create({
-  origin: 'https://api.yuki.sh',
+  origin: 'https://example.org',
 });
-const result = await embus('/ping');
+const result = await embus('/products.json');
 ```
 
 ```javascript
 import { Embus } from 'embus';
 
 const request = new Embus(({
-  origin: 'https://api.yuki.sh',
+  origin: 'https://example.org',
 });
-const result = await embus('/ping');
+const result = await embus('/products.json');
 ```
 
 ## API
 
 **embus(init, config?)**  
-**embus.get(url, data?, options?)**  
-**embus.post(url, data?, options?)**  
-**embus.put(url, data?, options?)**  
-**embus.patch(url, data?, options?)**  
-**embus.head(url, data?, options?)**  
-**embus.delete(url, data?, options?)**  
+**embus.get(url, payload?, options?)**  
+**embus.post(url, payload?, options?)**  
+**embus.put(url, payload?, options?)**  
+**embus.patch(url, payload?, options?)**  
+**embus.head(url, payload?, options?)**  
+**embus.delete(url, payload?, options?)**  
 **embus.create(options?)**  
 **embus.useRequestInterceptor(callback?)**  
 **embus.useResponseInterceptor(callback?)**
 
 ## 配置项
 
-网络请求的配置项与 fetch 完全相同，并在其基础上追加了下列四个额外属性：
+网络请求的配置项与 `fetch` 完全相同，并在其基础上追加了下列四个额外属性：
 
-```javascript
-{
-  origin: 'https://api.yuki.sh';
-  url: '/ping';
-  // 可选值：'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH'
-  method: 'GET'; // 默认值
-  // 可选值：'arraybuffer' | 'blob' | 'json' | 'text' | 'formData'
-  responseType: 'json', // 默认值
+```typescript
+interface RequestConfig {
+  url: string;
+  origin?: string;
+  // 请求载荷
+  payload?: object | null;
+  // 默认 'json'，可选值：'arraybuffer' | 'blob' | 'json' | 'text' | 'formData'
+  responseType?: ResponseType;
 }
 ```
 
