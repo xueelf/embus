@@ -15,12 +15,12 @@ importers:
       '@types/node':
         specifier: ^20.16.5
         version: 20.16.5
-      chalk:
-        specifier: ^5.3.0
-        version: 5.3.0
       esbuild:
         specifier: ^0.23.1
         version: 0.23.1
+      nebia:
+        specifier: ^0.0.5
+        version: 0.0.5(typescript@5.6.2)
       tsx:
         specifier: ^4.19.1
         version: 4.19.1
@@ -174,10 +174,6 @@ packages:
   '@types/node@20.16.5':
     resolution: {integrity: sha512-VwYCweNo3ERajwy0IUlqqcyZ8/A7Zwa9ZP3MnENWcB11AejO+tLy3pu850goUW2FC/IJMdZUfKpX/yxL1gymCA==}
 
-  chalk@5.3.0:
-    resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
-    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-
   esbuild@0.23.1:
     resolution: {integrity: sha512-VVNz/9Sa0bs5SELtn3f7qhJCDPCF5oMEl5cO9/SSinpE9hbPVvxbd572HH5AKiP7WD8INO53GgfDDhRjkylHEg==}
     engines: {node: '>=18'}
@@ -190,6 +186,11 @@ packages:
 
   get-tsconfig@4.8.1:
     resolution: {integrity: sha512-k9PN+cFBmaLWtVz29SkUoqU5O0slLuHJXt/2P+tMVFT+phsSGXGkp9t3rQIqdz0e+06EHNGs3oM6ZX1s2zHxRg==}
+
+  nebia@0.0.5:
+    resolution: {integrity: sha512-IYnV9jTXCrhQECxZodMDitYKO8t4LAD7W5b1qpoC3ZMgqdMb/T0plOyOxtJlBi84gDGme7neRncm5I8lCxjzTg==}
+    peerDependencies:
+      typescript: ^5.5.4
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -285,8 +286,6 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
-  chalk@5.3.0: {}
-
   esbuild@0.23.1:
     optionalDependencies:
       '@esbuild/aix-ppc64': 0.23.1
@@ -320,6 +319,10 @@ snapshots:
   get-tsconfig@4.8.1:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  nebia@0.0.5(typescript@5.6.2):
+    dependencies:
+      typescript: 5.6.2
 
   resolve-pkg-maps@1.0.0: {}
 
