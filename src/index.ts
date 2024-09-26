@@ -1,4 +1,4 @@
-import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from '@/utils';
+import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from './utils';
 
 export interface RequestConfig extends RequestInit {
   url: string;
@@ -120,7 +120,7 @@ export class Embus {
   }
 
   public create(options?: RequestOptions): EmbusInstance {
-    return createInstance(new Embus(options));
+    return createInstance(options);
   }
 
   public async request<T>(config: RequestConfig): Promise<Result<T>>;
@@ -195,11 +195,12 @@ export class Embus {
   }
 }
 
-interface EmbusInstance extends Embus {
+export interface EmbusInstance extends Embus {
   (...args: Parameters<Embus['request']>): ReturnType<Embus['request']>;
 }
 
-function createInstance(context: Embus): EmbusInstance {
+export function createInstance(options: RequestOptions = {}): EmbusInstance {
+  const context = new Embus(options);
   const instance = Embus.prototype.request.bind(context);
   const keys = <Array<keyof Embus>>Object.getOwnPropertyNames(Embus.prototype);
 
@@ -208,8 +209,6 @@ function createInstance(context: Embus): EmbusInstance {
   }
   return instance as unknown as EmbusInstance;
 }
+const instance: EmbusInstance = createInstance();
 
-const context = new Embus();
-const embus = createInstance(context);
-
-export default embus;
+export default instance;
