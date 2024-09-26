@@ -1,4 +1,4 @@
-import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from './utils';
+import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from './util';
 
 export interface RequestConfig extends RequestInit {
   url: string;
@@ -212,3 +212,4 @@ export function createInstance(options: RequestOptions = {}): EmbusInstance {
 const instance: EmbusInstance = createInstance();
 
 export default instance;
+export * from './util';
