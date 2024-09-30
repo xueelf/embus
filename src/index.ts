@@ -1,14 +1,16 @@
 import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from './util';
 
 export interface RequestConfig extends RequestInit {
+  [key: string]: unknown;
   url: string;
   origin?: string;
+  href?: string;
   method?: Method;
   headers?: Record<string, string>;
   payload?: object | null;
   responseType?: ResponseType;
 }
-export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'body' | 'payload'>;
+export type RequestOptions = Omit<RequestConfig, 'url' | 'href' | 'method' | 'body' | 'payload'>;
 export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 export type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
 
@@ -55,6 +57,7 @@ export class Embus {
     this.responseInterceptors = [];
 
     this.useRequestInterceptor(config => {
+      config.origin ??= '';
       config.method ??= 'GET';
       config.responseType ??= 'json';
       config.headers = assignDeep<Record<string, string>>(
@@ -63,8 +66,9 @@ export class Embus {
         },
         config.headers,
       );
-      this.parseBody(config);
+      config.href = config.origin + config.url;
 
+      this.parseBody(config);
       return config;
     });
     const methods = ['get', 'delete', 'head', 'post', 'put', 'patch'];
@@ -83,13 +87,13 @@ export class Embus {
     });
   }
 
-  private parseUrl(config: RequestConfig): string {
-    let url: string = (config.origin ?? '') + config.url;
+  private parseHref(config: RequestConfig): string {
+    let href: string = config.href!;
 
     if (config.method === 'GET') {
-      url += (/\?/.test(url) ? '&' : '?') + paramsToString(config.payload);
+      href += (/\?/.test(href) ? '&' : '?') + paramsToString(config.payload);
     }
-    return url;
+    return href;
   }
 
   private parseBody(config: RequestConfig): RequestConfig {
@@ -147,8 +151,8 @@ export class Embus {
       const interceptor = this.requestInterceptors[index];
       assignDeep(defaultConfig, await interceptor(defaultConfig));
     }
-    const url = this.parseUrl(defaultConfig);
-    const response = await fetch(url, defaultConfig);
+    const href = this.parseHref(defaultConfig);
+    const response = await fetch(href, defaultConfig);
     const result: Result = {
       data: null,
       status: response.status,
