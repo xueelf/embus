@@ -1,4 +1,11 @@
-import { parseError, paramsToString, assignDeep, objectToFormData, cloneDeep } from './util';
+import {
+  assignDeep,
+  cloneDeep,
+  objectToFormData,
+  objectToString,
+  parseError,
+  paramsToString,
+} from './util';
 
 export interface RequestConfig extends RequestInit {
   [key: string]: unknown;
@@ -12,7 +19,7 @@ export interface RequestConfig extends RequestInit {
 }
 export type RequestOptions = Omit<RequestConfig, 'url' | 'href' | 'method' | 'body' | 'payload'>;
 export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
-export type ResponseType = 'arraybuffer' | 'blob' | 'json' | 'text' | 'formData';
+export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData';
 
 export interface Result<T = unknown> {
   data: T;
@@ -48,6 +55,7 @@ export interface Embus {
   put<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
   patch<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
 }
+
 export class Embus {
   private options: RequestOptions;
   private requestInterceptors: RequestInterceptor[];
@@ -107,7 +115,7 @@ export class Embus {
 
     switch (config.headers?.['Content-Type']) {
       case 'application/json':
-        config.body = JSON.stringify(payload);
+        config.body = objectToString(payload);
         break;
       case 'multipart/form-data':
         config.body = objectToFormData(payload);
@@ -164,7 +172,7 @@ export class Embus {
 
     try {
       switch (defaultConfig.responseType) {
-        case 'arraybuffer':
+        case 'arrayBuffer':
           result.data = await response.arrayBuffer();
           break;
         case 'blob':
@@ -220,6 +228,7 @@ export function createInstance(options: RequestOptions = {}): EmbusInstance {
   }
   return instance as unknown as EmbusInstance;
 }
+
 const instance: EmbusInstance = createInstance();
 
 export default instance;

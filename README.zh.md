@@ -138,7 +138,7 @@ interface RequestConfig {
   origin?: string;
   // 请求载荷
   payload?: object | null;
-  // 默认 'json'，可选值：'arraybuffer' | 'blob' | 'json' | 'text' | 'formData'
+  // 默认 'json'，可选值：'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData'
   responseType?: ResponseType;
 }
 ```

@@ -26,6 +26,26 @@ export function cloneDeep<T extends object>(object: T): T {
   return JSON.parse(JSON.stringify(object));
 }
 
+export function objectToFormData(params: object): FormData {
+  const formData = new FormData();
+  const keys = Object.keys(params);
+
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = Reflect.get(params, key);
+
+    formData.append(key, value);
+  }
+  return formData;
+}
+
+export function objectToString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  return JSON.stringify(value, null, 2);
+}
+
 export function parseError(error: unknown): string {
   return error instanceof Error ? error.message : objectToString(error);
 }
@@ -44,24 +64,4 @@ export function paramsToString(data: unknown): string {
     params.append(key, value);
   }
   return params.toString();
-}
-
-export function objectToString(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  return JSON.stringify(value, null, 2);
-}
-
-export function objectToFormData(params: object): FormData {
-  const formData = new FormData();
-  const keys = Object.keys(params);
-
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const value = Reflect.get(params, key);
-
-    formData.append(key, value);
-  }
-  return formData;
 }

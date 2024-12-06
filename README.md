@@ -138,7 +138,7 @@ interface RequestConfig {
   origin?: string;
   // request payload
   payload?: object | null;
-  // default 'json', options are: 'array buffer' | 'bloom' | 'json' | 'text' | 'formData'
+  // default 'json', options are: 'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData'
   responseType?: ResponseType;
 }
 ```
