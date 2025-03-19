@@ -7,11 +7,13 @@ import {
   paramsToString,
 } from './util';
 
+export * from './util';
+
 export interface RequestConfig extends RequestInit {
   [key: string]: unknown;
   url: string;
   origin?: string;
-  href?: string;
+  href: string;
   method?: Method;
   headers?: Record<string, string>;
   payload?: object | null;
@@ -26,7 +28,7 @@ export interface Result<T = unknown> {
   config: RequestConfig;
   status: number;
   statusText: string;
-  headers: Headers;
+  headers: Response['headers'];
 }
 
 class EmbusError extends Error {
@@ -232,4 +234,3 @@ export function createInstance(options: RequestOptions = {}): EmbusInstance {
 const instance: EmbusInstance = createInstance();
 
 export default instance;
-export * from './util';

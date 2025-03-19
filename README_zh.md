@@ -32,7 +32,7 @@ Embus 是一个基于 [Fetch API](https://developer.mozilla.org/zh-CN/docs/Web/A
 </script>
 ```
 
-你也可以根据自己的喜好来使用其它 CDN，例如 [jsDelivr](https://www.jsdelivr.com/) 和 [UNPKG](https://unpkg.com/)。
+你也可以根据自己的喜好来使用其它 CDN，例如 [jsDelivr](https://www.jsdelivr.com/) 和 [UNPKG](https://unpkg.com/) 等。
 
 ### NPM
 
@@ -145,4 +145,4 @@ interface RequestConfig {
 
 ## 关于
 
-Embus 是日语「取って」的罗马音，其英语正是 Fetch，而且「embus」也和 「tote」非常相似，我便将其用做了该项目的名字。
+「to tte」是日语「取って」的罗马音，其英语正是「fetch」，而且「embus」也和 「tote」非常相似，我便将其用做了该项目的名字。

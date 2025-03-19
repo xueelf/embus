@@ -2,7 +2,7 @@
 
 Embus is a lightweight JavaScript HTTP client based on [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), which can be used in any runtime that supports `fetch`.
 
-Read this in other languages: English | [简体中文](./README.zh.md)
+Read this in other languages: English | [简体中文](./README_zh.md)
 
 ## Installation
 
@@ -32,7 +32,7 @@ or
 </script>
 ```
 
-You can also use other CDNs according to your preferences, such as [jsDelivr](https://www.jsdelivr.com/) and [UNPKG](https://unpkg.com/).
+You can also use other CDNs according to your preferences, such as [jsDelivr](https://www.jsdelivr.com/) and [UNPKG](https://unpkg.com/) etc.
 
 ### NPM
 
@@ -145,4 +145,4 @@ interface RequestConfig {
 
 ## About
 
-Embus is the romanization of the Japanese word "取って", which is exactly Fetch in English, and "embus" is also very similar to "tote", so I used it as the name of the project.
+"to tte" is the romanization of the Japanese word "取って", which is exactly "fetch" in English, and "embus" is also very similar to "tote", so I used it as the name of the project.
