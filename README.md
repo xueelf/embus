@@ -1,19 +1,19 @@
-# totte
+# adfer
 
-Totte is a lightweight JavaScript HTTP client based on [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), which can be used in any runtime that supports `fetch`.
+Adfer is a lightweight JavaScript HTTP client based on [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), which can be used in any runtime that supports `fetch`.
 
 Read this in other languages: English | [简体中文](./README_zh.md)
 
 ## Installation
 
 > [!IMPORTANT]
-> Totte is a pure ESM package, if you encounter difficulties using it in your project, can [read this](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c).
+> Adfer is a pure ESM package, if you encounter difficulties using it in your project, can [read this](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c).
 
 ### CDN
 
 ```html
 <script type="module">
-  import totte from 'https://esm.sh/totte';
+  import adfer from 'https://esm.sh/adfer';
 </script>
 ```
 
@@ -23,12 +23,12 @@ or
 <script type="importmap">
   {
     "imports": {
-      "totte": "https://esm.sh/totte"
+      "adfer": "https://esm.sh/adfer"
     }
   }
 </script>
 <script type="module">
-  import totte from 'totte';
+  import adfer from 'adfer';
 </script>
 ```
 
@@ -37,22 +37,22 @@ You can also use other CDNs according to your preferences, such as [jsDelivr](ht
 ### NPM
 
 ```shell
-npm install totte
+npm install adfer
 ```
 
 ## Usage
 
 ```javascript
-import totte from 'totte';
+import adfer from 'adfer';
 
 // Request GET
-const result1 = await totte('https://example.org/products.json');
+const result1 = await adfer('https://example.org/products.json');
 // Request POST
-const result2 = await totte.post('https://example.org/post', {
+const result2 = await adfer.post('https://example.org/post', {
   username: 'example',
 });
 // Request FormData
-const result3 = await totte.post(
+const result3 = await adfer.post(
   'https://example.org/post',
   {
     username: 'example',
@@ -65,7 +65,7 @@ const result3 = await totte.post(
 );
 ```
 
-Compared to `fetch`, `totte` provides a simpler and more flexible API.
+Compared to `fetch`, `adfer` provides a simpler and more flexible API.
 
 ```javascript
 // GET Request
@@ -95,38 +95,38 @@ const response3 = await fetch('https://example.org/post', {
 const json3 = await response3.json();
 ```
 
-You can also use `Totte` or `create` to generate new instance:
+You can also use `Adfer` or `create` to generate new instance:
 
 ```javascript
-import totte from 'totte';
+import adfer from 'adfer';
 
-const request = totte.create({
+const request = adfer.create({
   origin: 'https://example.org',
 });
-const result = await totte('/products.json');
+const result = await adfer('/products.json');
 ```
 
 ```javascript
-import { Totte } from 'totte';
+import { Adfer } from 'adfer';
 
-const request = new Totte(({
+const request = new Adfer(({
   origin: 'https://example.org',
 });
-const result = await totte('/products.json');
+const result = await adfer('/products.json');
 ```
 
 ## API
 
-**totte(init, config?)**  
-**totte.get(url, payload?, options?)**  
-**totte.post(url, payload?, options?)**  
-**totte.put(url, payload?, options?)**  
-**totte.patch(url, payload?, options?)**  
-**totte.head(url, payload?, options?)**  
-**totte.delete(url, payload?, options?)**  
-**totte.create(options?)**  
-**totte.useRequestInterceptor(callback?)**  
-**totte.useResponseInterceptor(callback?)**
+**adfer(init, config?)**  
+**adfer.get(url, payload?, options?)**  
+**adfer.post(url, payload?, options?)**  
+**adfer.put(url, payload?, options?)**  
+**adfer.patch(url, payload?, options?)**  
+**adfer.head(url, payload?, options?)**  
+**adfer.delete(url, payload?, options?)**  
+**adfer.create(options?)**  
+**adfer.useRequestInterceptor(callback?)**  
+**adfer.useResponseInterceptor(callback?)**
 
 ## Config
 
@@ -145,4 +145,4 @@ interface RequestConfig {
 
 ## About
 
-"to tte" is the romanization of the Japanese word "取って", which is exactly "fetch" in English, and "totte" is also very similar to "tote", so I used it as the name of the project.
+"adfer" comes from the Latin verb "affero" (ad + ferre), meaning "to bring toward, to fetch". It follows the same naming philosophy as the Fetch API - a single verb that directly describes what the library does: fetching data.
