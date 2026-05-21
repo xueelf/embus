@@ -1,6 +1,6 @@
 import { serve } from 'bun';
 import { expect, test } from 'bun:test';
-import { Embus } from '../../src';
+import { Adfer } from '../../src';
 
 const server = serve({
   port: 8080,
@@ -31,7 +31,7 @@ const server = serve({
   },
 });
 
-const request = new Embus({
+const request = new Adfer({
   origin: server.url.origin,
 });
 const payload = {

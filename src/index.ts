@@ -31,10 +31,10 @@ export interface Result<T = unknown> {
   headers: Response['headers'];
 }
 
-class EmbusError extends Error {
+class AdferError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'EmbusError';
+    this.name = 'AdferError';
   }
 }
 
@@ -45,10 +45,10 @@ export type ResponseInterceptor<T = unknown, R extends Result<T> = Result<T>> = 
 
 const methods = ['get', 'delete', 'head', 'post', 'put', 'patch'];
 
-export interface Embus {
+export interface Adfer {
   useRequestInterceptor(interceptor: RequestInterceptor): void;
   useResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void;
-  create(options?: RequestOptions): EmbusInstance;
+  create(options?: RequestOptions): AdferInstance;
   request<T>(config: RequestConfig): Promise<Result<T>>;
   get<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
   delete<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
@@ -58,7 +58,7 @@ export interface Embus {
   patch<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
 }
 
-export class Embus {
+export class Adfer {
   private options: RequestOptions;
   private requestInterceptors: RequestInterceptor[];
   private responseInterceptors: ResponseInterceptor[];
@@ -134,7 +134,7 @@ export class Embus {
     this.responseInterceptors.push(<ResponseInterceptor>interceptor);
   }
 
-  public create(options?: RequestOptions): EmbusInstance {
+  public create(options?: RequestOptions): AdferInstance {
     return createInstance(options);
   }
 
@@ -154,7 +154,7 @@ export class Embus {
         assignDeep(defaultConfig, init);
         break;
       default:
-        throw new EmbusError('Invalid arguments');
+        throw new AdferError('Invalid arguments');
     }
     const req_interceptor_count = this.requestInterceptors.length;
 
@@ -192,7 +192,7 @@ export class Embus {
       }
     } catch (error) {
       if (!response.ok) {
-        throw new EmbusError(parseError(error));
+        throw new AdferError(parseError(error));
       }
     }
     const res_interceptor_count = this.responseInterceptors.length;
@@ -210,14 +210,14 @@ export class Embus {
   }
 }
 
-export interface EmbusInstance extends Embus {
-  (...args: Parameters<Embus['request']>): ReturnType<Embus['request']>;
+export interface AdferInstance extends Adfer {
+  (...args: Parameters<Adfer['request']>): ReturnType<Adfer['request']>;
 }
 
-export function createInstance(options: RequestOptions = {}): EmbusInstance {
-  const context = new Embus(options);
-  const instance = Embus.prototype.request.bind(context);
-  const keys = <Array<keyof Embus>>[...Object.getOwnPropertyNames(Embus.prototype), ...methods];
+export function createInstance(options: RequestOptions = {}): AdferInstance {
+  const context = new Adfer(options);
+  const instance = Adfer.prototype.request.bind(context);
+  const keys = <Array<keyof Adfer>>[...Object.getOwnPropertyNames(Adfer.prototype), ...methods];
 
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
@@ -228,9 +228,9 @@ export function createInstance(options: RequestOptions = {}): EmbusInstance {
     }
     Reflect.set(instance, key, method.bind(context));
   }
-  return instance as unknown as EmbusInstance;
+  return instance as unknown as AdferInstance;
 }
 
-const instance: EmbusInstance = createInstance();
+const instance: AdferInstance = createInstance();
 
 export default instance;

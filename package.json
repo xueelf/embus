@@ -1,5 +1,5 @@
 {
-  "name": "embus",
+  "name": "adfer",
   "version": "0.2.0",
   "description": "A lightweight JavaScript HTTP client based on Fetch API",
   "main": "lib/index.js",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xueelf/embus.git"
+    "url": "git+https://github.com/xueelf/adfer.git"
   },
   "keywords": [
     "api",
@@ -26,9 +26,9 @@
   "author": "Yuki <admin@yuki.sh>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/xueelf/embus/issues"
+    "url": "https://github.com/xueelf/adfer/issues"
   },
-  "homepage": "https://github.com/xueelf/embus#readme",
+  "homepage": "https://github.com/xueelf/adfer#readme",
   "devDependencies": {
     "@types/bun": "latest",
     "nebia": "latest"
