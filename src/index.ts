@@ -1,236 +1,293 @@
-import {
-  assignDeep,
-  cloneDeep,
-  objectToFormData,
-  objectToString,
-  parseError,
-  paramsToString,
-} from './util';
+import { objectToFormData, paramsToString } from './util';
 
-export * from './util';
-
+/** Request configuration with all native `RequestInit` options. */
 export interface RequestConfig extends RequestInit {
-  [key: string]: unknown;
+  /** An absolute URL or a URL relative to `origin`. */
   url: string;
+  /** Base URL for relative request URLs. */
   origin?: string;
-  href: string;
   method?: Method;
-  headers?: Record<string, string>;
+  /** Query parameters for GET and HEAD requests, or data to serialize for other methods. */
   payload?: object | null;
+  /** How to parse the response body. Defaults to `json`. */
   responseType?: ResponseType;
 }
-export type RequestOptions = Omit<RequestConfig, 'url' | 'href' | 'method' | 'body' | 'payload'>;
+
+/** Options accepted by instances and request method helpers. */
+export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData';
 
 export interface Result<T = unknown> {
-  data: T;
+  data: T | null;
   config: RequestConfig;
   status: number;
   statusText: string;
   headers: Response['headers'];
 }
 
-class AdferError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AdferError';
+/** Error type for invalid configuration, HTTP status errors, and response parsing failures. */
+export class EmbusError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'EmbusError';
   }
 }
 
+/** Reads or changes the final request configuration before the request is sent. */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-export type ResponseInterceptor<T = unknown, R extends Result<T> = Result<T>> = (
-  result: R,
-) => void | R | Promise<void | R>;
+/** Reads a successful result. A returned value replaces `result.data`. */
+export type ResponseInterceptor<T = unknown> = (
+  result: Result<T>,
+) => void | T | null | Promise<void | T | null>;
 
-const methods = ['get', 'delete', 'head', 'post', 'put', 'patch'];
-
-export interface Adfer {
-  useRequestInterceptor(interceptor: RequestInterceptor): void;
-  useResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void;
-  create(options?: RequestOptions): AdferInstance;
-  request<T>(config: RequestConfig): Promise<Result<T>>;
-  get<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
-  delete<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
-  head<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
-  post<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
-  put<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
-  patch<T>(url: string, payload?: object | null, options?: RequestOptions): Promise<Result<T>>;
+/** Applies defaults before and after request interceptors run. */
+function applyDefaults(config: RequestConfig): void {
+  config.method ??= 'GET';
+  config.responseType ??= 'json';
 }
 
-export class Adfer {
-  private options: RequestOptions;
-  private requestInterceptors: RequestInterceptor[];
-  private responseInterceptors: ResponseInterceptor[];
+/** Resolves the origin and appends GET and HEAD payloads as query parameters. */
+function parseHref(config: RequestConfig): string {
+  const href = config.origin
+    ? new URL(
+        config.url,
+        config.origin.endsWith('/') ? config.origin : `${config.origin}/`,
+      ).toString()
+    : config.url;
 
-  constructor(options: RequestOptions = {}) {
-    this.options = options;
-    this.requestInterceptors = [];
-    this.responseInterceptors = [];
-
-    this.useRequestInterceptor(config => {
-      config.origin ??= '';
-      config.method ??= 'GET';
-      config.responseType ??= 'json';
-      config.headers = assignDeep<Record<string, string>>(
-        {
-          'Content-Type': 'application/json',
-        },
-        config.headers,
-      );
-      config.href = config.origin + config.url;
-
-      this.parseBody(config);
-      return config;
-    });
-
-    methods.forEach(method => {
-      Reflect.set(
-        this,
-        method,
-        (url: string, payload?: object | null, options: RequestOptions = {}): Promise<Result> =>
-          this.request.call(this, url, {
-            method: <Method>method.toUpperCase(),
-            payload,
-            ...options,
-          }),
-      );
-    });
-  }
-
-  private parseHref(config: RequestConfig): string {
-    let href: string = config.href!;
-
-    if (config.method === 'GET') {
-      href += (/\?/.test(href) ? '&' : '?') + paramsToString(config.payload);
-    }
+  if (config.method !== 'GET' && config.method !== 'HEAD') {
     return href;
   }
 
-  private parseBody(config: RequestConfig): RequestConfig {
-    const { body, method, payload } = config;
+  const query = paramsToString(config.payload);
 
-    if (method === 'GET' || body || !payload) {
-      return config;
-    }
-    // const has_blob = Object.entries(payload).some(([_, value]) => value instanceof Blob);
+  if (!query) {
+    return href;
+  }
+  const hashIndex = href.indexOf('#');
+  const hash = hashIndex === -1 ? '' : href.slice(hashIndex);
+  const base = hashIndex === -1 ? href : href.slice(0, hashIndex);
 
-    switch (config.headers?.['Content-Type']) {
-      case 'application/json':
-        config.body = objectToString(payload);
-        break;
-      case 'multipart/form-data':
-        config.body = objectToFormData(payload);
-        break;
+  return `${base}${base.includes('?') ? '&' : '?'}${query}${hash}`;
+}
+
+/** Converts non-query payloads to request bodies based on Content-Type. */
+function parseBody(config: RequestConfig): void {
+  const { body, method, payload } = config;
+
+  // null is an explicit empty body. Only undefined allows payload serialization.
+  if (method === 'GET' || method === 'HEAD' || body !== undefined || payload == null) {
+    return;
+  }
+  const headers = new Headers(config.headers);
+  const contentType = headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
+
+  if (!contentType || contentType === 'application/json' || contentType.endsWith('+json')) {
+    config.body = JSON.stringify(payload);
+
+    if (!contentType) {
+      headers.set('content-type', 'application/json');
     }
-    return config;
+  } else if (contentType === 'multipart/form-data') {
+    config.body = objectToFormData(payload);
+    // Let Fetch generate the correct FormData boundary.
+    headers.delete('content-type');
+  }
+  config.headers = headers;
+}
+
+/** Parses a successful response and handles responses without a body. */
+async function parseResponse(response: Response, config: RequestConfig): Promise<unknown> {
+  if (config.method === 'HEAD' || response.status === 204 || response.status === 205) {
+    return null;
+  }
+  switch (config.responseType) {
+    case 'arrayBuffer':
+      return response.arrayBuffer();
+    case 'blob':
+      return response.blob();
+    case 'formData':
+      return response.formData();
+    case 'json': {
+      // response.json() throws on an empty body. Embus returns null instead.
+      const text = await response.text();
+      return text.trim() ? JSON.parse(text) : null;
+    }
+    case 'text':
+      return response.text();
+    default:
+      throw new TypeError(`Unsupported response type: ${String(config.responseType)}`);
+  }
+}
+
+export class Embus {
+  private readonly options: RequestOptions;
+  private readonly requestInterceptors: RequestInterceptor[] = [];
+  private readonly responseInterceptors: ResponseInterceptor<unknown>[] = [];
+
+  constructor(options: RequestOptions = {}) {
+    this.options = options;
   }
 
+  /** Registers a request interceptor that runs in registration order. */
   public useRequestInterceptor(interceptor: RequestInterceptor): void {
     this.requestInterceptors.push(interceptor);
   }
 
+  /** Registers a response interceptor that runs in registration order. */
   public useResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void {
-    this.responseInterceptors.push(<ResponseInterceptor>interceptor);
+    this.responseInterceptors.push(interceptor as ResponseInterceptor);
   }
 
-  public create(options?: RequestOptions): AdferInstance {
+  /** Creates a callable instance with isolated configuration and interceptors. */
+  public create(options?: RequestOptions): EmbusInstance {
     return createInstance(options);
   }
 
+  public get<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'GET', payload });
+  }
+
+  public delete<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'DELETE', payload });
+  }
+
+  public head<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'HEAD', payload });
+  }
+
+  public post<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'POST', payload });
+  }
+
+  public put<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'PUT', payload });
+  }
+
+  public patch<T>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<Result<T>> {
+    return this.request(url, { ...options, method: 'PATCH', payload });
+  }
+
+  /** Sends a request using a complete configuration object or a URL with separate options. */
   public async request<T>(config: RequestConfig): Promise<Result<T>>;
   public async request<T>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
   public async request<T>(
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
   ): Promise<Result<T>> {
-    const defaultConfig = cloneDeep(this.options) as RequestConfig;
-
-    switch (typeof init) {
-      case 'string':
-        assignDeep(defaultConfig, { url: init }, config);
-        break;
-      case 'object':
-        assignDeep(defaultConfig, init);
-        break;
-      default:
-        throw new AdferError('Invalid arguments');
+    if (typeof init !== 'string' && (!init || typeof init !== 'object')) {
+      throw new EmbusError('Invalid arguments');
     }
-    const req_interceptor_count = this.requestInterceptors.length;
+    const requestConfig: RequestConfig =
+      typeof init === 'string'
+        ? { ...this.options, ...config, url: init }
+        : { ...this.options, ...init };
 
-    for (let index = 0; index < req_interceptor_count; index++) {
-      const interceptor = this.requestInterceptors[index];
-      assignDeep(defaultConfig, await interceptor(defaultConfig));
+    // Instance headers provide defaults. Request headers override matching names.
+    const headers = new Headers(this.options.headers);
+
+    for (const [key, value] of new Headers(requestConfig.headers)) {
+      headers.set(key, value);
     }
-    const href = this.parseHref(defaultConfig);
-    const response = await fetch(href, defaultConfig);
+    requestConfig.headers = headers;
+
+    if (typeof requestConfig.url !== 'string') {
+      throw new EmbusError('Invalid URL');
+    }
+    applyDefaults(requestConfig);
+
+    for (const interceptor of this.requestInterceptors) {
+      Object.assign(requestConfig, await interceptor(requestConfig));
+    }
+    applyDefaults(requestConfig);
+    parseBody(requestConfig);
+
+    const href = parseHref(requestConfig);
+    const response = await fetch(href, requestConfig);
+
+    if (!response.ok) {
+      throw new EmbusError(`${response.status} ${response.statusText}`, {
+        cause: response,
+      });
+    }
     const result: Result = {
       data: null,
       status: response.status,
-      config: defaultConfig,
+      config: requestConfig,
       statusText: response.statusText,
       headers: response.headers,
     };
 
     try {
-      switch (defaultConfig.responseType) {
-        case 'arrayBuffer':
-          result.data = await response.arrayBuffer();
-          break;
-        case 'blob':
-          result.data = await response.blob();
-          break;
-        case 'formData':
-          result.data = await response.formData();
-          break;
-        case 'json':
-          result.data = await response.json();
-          break;
-        case 'text':
-          result.data = await response.text();
-          break;
-      }
+      result.data = await parseResponse(response, requestConfig);
     } catch (error) {
-      if (!response.ok) {
-        throw new AdferError(parseError(error));
+      const message = error instanceof Error ? error.message : String(error);
+      throw new EmbusError(message, { cause: error });
+    }
+
+    for (const interceptor of this.responseInterceptors) {
+      const transformed = await interceptor(result);
+
+      // undefined preserves data. Every other return value replaces it.
+      if (transformed !== undefined) {
+        result.data = transformed;
       }
     }
-    const res_interceptor_count = this.responseInterceptors.length;
-
-    for (let index = 0; index < res_interceptor_count; index++) {
-      const interceptor = this.responseInterceptors[index];
-      const ripeData = await interceptor(result);
-
-      if (!ripeData) {
-        continue;
-      }
-      result.data = ripeData;
-    }
-    return <Result<T>>result;
+    return result as Result<T>;
   }
 }
 
-export interface AdferInstance extends Adfer {
-  (...args: Parameters<Adfer['request']>): ReturnType<Adfer['request']>;
+/** A client that is both callable and exposes the `Embus` instance methods. */
+export interface EmbusInstance extends Embus {
+  <T>(config: RequestConfig): Promise<Result<T>>;
+  <T>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
 }
 
-export function createInstance(options: RequestOptions = {}): AdferInstance {
-  const context = new Adfer(options);
-  const instance = Adfer.prototype.request.bind(context);
-  const keys = <Array<keyof Adfer>>[...Object.getOwnPropertyNames(Adfer.prototype), ...methods];
+/** Creates an independent callable client instance. */
+export function createInstance(options: RequestOptions = {}): EmbusInstance {
+  const context = new Embus(options);
+  // Bind every entry point to one context so they share configuration and interceptors.
+  const instance = context.request.bind(context) as EmbusInstance;
 
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const method = context[key];
+  instance.request = context.request.bind(context);
+  instance.get = context.get.bind(context);
+  instance.delete = context.delete.bind(context);
+  instance.head = context.head.bind(context);
+  instance.post = context.post.bind(context);
+  instance.put = context.put.bind(context);
+  instance.patch = context.patch.bind(context);
+  instance.create = context.create.bind(context);
+  instance.useRequestInterceptor = context.useRequestInterceptor.bind(context);
+  instance.useResponseInterceptor = context.useResponseInterceptor.bind(context);
 
-    if (typeof method !== 'function') {
-      continue;
-    }
-    Reflect.set(instance, key, method.bind(context));
-  }
-  return instance as unknown as AdferInstance;
+  return instance;
 }
 
-const instance: AdferInstance = createInstance();
+const instance: EmbusInstance = createInstance();
 
 export default instance;

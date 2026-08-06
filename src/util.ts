@@ -1,67 +1,59 @@
-export function assignDeep<T extends object>(target: any, ...sources: unknown[]): T {
-  for (let i = 0; i < sources.length; i++) {
-    const source = sources[i];
-
-    if (!source || typeof source !== 'object') {
-      return target;
-    }
-    Object.entries(source).forEach(([key, value]) => {
-      if (!value || typeof value !== 'object') {
-        target[key] = value;
-        return;
-      }
-      if (Array.isArray(value)) {
-        target[key] = [];
-      }
-      if (typeof target[key] !== 'object' || !target[key]) {
-        target[key] = {};
-      }
-      assignDeep(target[key], value);
-    });
-  }
-  return target;
-}
-
-export function cloneDeep<T extends object>(object: T): T {
-  return JSON.parse(JSON.stringify(object));
-}
-
-export function objectToFormData(params: object): FormData {
-  const formData = new FormData();
-  const keys = Object.keys(params);
-
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const value = Reflect.get(params, key);
-
+/** Appends Blob and File values unchanged, and converts other values to strings. */
+function appendFormValue(formData: FormData, key: string, value: unknown): void {
+  if (value instanceof Blob) {
     formData.append(key, value);
+    return;
+  }
+  formData.append(key, String(value));
+}
+
+/** Converts an object to FormData, using repeated fields for arrays and skipping undefined. */
+export function objectToFormData(payload: object): FormData {
+  const formData = new FormData();
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined) {
+          appendFormValue(formData, key, item);
+        }
+      }
+      continue;
+    }
+    appendFormValue(formData, key, value);
   }
   return formData;
 }
 
-export function objectToString(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  return JSON.stringify(value, null, 2);
-}
-
-export function parseError(error: unknown): string {
-  return error instanceof Error ? error.message : objectToString(error);
-}
-
+/** Converts an object to a query string, using repeated parameters for arrays. */
 export function paramsToString(data: unknown): string {
   if (!data || typeof data !== 'object') {
     return '';
   }
+
+  if (data instanceof URLSearchParams) {
+    return data.toString();
+  }
   const params = new URLSearchParams();
-  const keys = Object.keys(data);
 
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const value = Reflect.get(data, key);
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
+      continue;
+    }
 
-    params.append(key, value);
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined) {
+          params.append(key, String(item));
+        }
+      }
+      continue;
+    }
+    params.append(key, String(value));
   }
   return params.toString();
 }
