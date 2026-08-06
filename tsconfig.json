@@ -1,31 +1,36 @@
 {
   "compilerOptions": {
-    /* Language and Environment */
-    "target": "ESNext",
+    // Environment setup & latest features
     "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "Preserve",
     "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "types": ["bun"],
 
-    /* Modules */
-    "module": "ESNext",
+    // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-
-    /* Emit */
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "declarationDir": "lib",
-
-    /* Interop Constraints */
     "verbatimModuleSyntax": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "outDir": "dist",
+    "paths": {
+      "~/*": ["./*"],
+      "@/*": ["./src/*"]
+    },
 
-    /* Type Checking */
+    // Best practices
     "strict": true,
+    "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
 
-    /* Completeness */
-    "skipLibCheck": true
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["src/*.ts"]
+  "include": ["*.config.ts", "src", "scripts", "tests"]
 }
