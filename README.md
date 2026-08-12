@@ -190,7 +190,7 @@ Every request resolves to a `Result<T>`:
 
 ```typescript
 interface Result<T = unknown> {
-  data: T | null;
+  data: T;
   config: RequestConfig;
   status: number;
   statusText: string;

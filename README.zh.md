@@ -190,7 +190,7 @@ type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 
 ```typescript
 interface Result<T = unknown> {
-  data: T | null;
+  data: T;
   config: RequestConfig;
   status: number;
   statusText: string;
