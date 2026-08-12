@@ -212,7 +212,16 @@ test('joins origins and relative paths without requiring slashes', async () => {
 });
 
 test('returns null for empty successful responses', async () => {
-  expect((await request.delete('/empty')).data).toBeNull();
+  const { data } = await request.delete<null>('/empty');
+
+  expect(data).toBeNull();
+});
+
+test('uses the generic type for response data', async () => {
+  const { data } = await request.get<string>('/testing', null, { responseType: 'text' });
+  const text: string = data;
+
+  expect(text).toBe('GET');
 });
 
 test('throws an exported TotteError for unsuccessful responses', async () => {

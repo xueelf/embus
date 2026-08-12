@@ -19,7 +19,7 @@ export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData';
 
 export interface Result<T = unknown> {
-  data: T | null;
+  data: T;
   config: RequestConfig;
   status: number;
   statusText: string;
@@ -37,9 +37,7 @@ export class TotteError extends Error {
 /** Reads or changes the final request configuration before the request is sent. */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
 /** Reads a successful result. A returned value replaces `result.data`. */
-export type ResponseInterceptor<T = unknown> = (
-  result: Result<T>,
-) => void | T | null | Promise<void | T | null>;
+export type ResponseInterceptor<T = unknown> = (result: Result<T>) => void | T | Promise<void | T>;
 
 /** Applies defaults before and after request interceptors run. */
 function applyDefaults(config: RequestConfig): void {
