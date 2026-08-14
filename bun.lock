@@ -10,7 +10,7 @@
         "@commitlint/types": "^21.2.0",
         "@eslint/js": "^10.0.1",
         "@types/bun": "^1.3.14",
-        "annal": "^0.0.2",
+        "annal": "^0.1.0",
         "eslint": "^10.8.0",
         "husky": "^9.1.7",
         "prettier": "^3.9.6",
@@ -131,7 +131,7 @@
 
     "ajv": ["ajv@6.15.0", "", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw=="],
 
-    "annal": ["annal@0.0.2", "", { "peerDependencies": { "typescript": "^6.0.3" } }, "sha512-5JCdufxqFq248+zKcHD+ge6tya9miVfzpC4Aw7HnSsp2ymIQRQpp343hLGMR22yPBdzMM+yTj7BkYdUE3nX2OQ=="],
+    "annal": ["annal@0.1.0", "", { "peerDependencies": { "typescript": "^6.0.3" } }, "sha512-7myFeTapbl9TvHGkGzh6uTF+c4q7d9/DbawCS19+/3ZAyyXgXSIUQH8yvXLBhfZLgb5J6ks7BTjHUL4xtd4Z6A=="],
 
     "ansi-regex": ["ansi-regex@6.2.2", "", {}, "sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg=="],
 
