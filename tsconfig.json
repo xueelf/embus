@@ -17,7 +17,7 @@
     "outDir": "dist",
     "paths": {
       "~/*": ["./*"],
-      "@/*": ["./src/*"]
+      "#/*": ["./src/*"]
     },
 
     // Best practices

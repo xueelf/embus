@@ -218,7 +218,9 @@ test('returns null for empty successful responses', async () => {
 });
 
 test('uses the generic type for response data', async () => {
-  const { data } = await request.get<string>('/testing', null, { responseType: 'text' });
+  const { data } = await request.get<string>('/testing', null, {
+    responseType: 'text',
+  });
   const text: string = data;
 
   expect(text).toBe('GET');
