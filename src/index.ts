@@ -159,12 +159,12 @@ export class Embus {
     return this.request(url, { ...options, method: 'DELETE', payload });
   }
 
-  public head<T>(
+  public head(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request(url, { ...options, method: 'HEAD', payload });
+  ): Promise<Result<null>> {
+    return this.request<null>(url, { ...options, method: 'HEAD', payload });
   }
 
   public post<T>(

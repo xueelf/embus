@@ -193,7 +193,7 @@ test('explicit bodies, including null, take precedence over payloads', async () 
 });
 
 test('adds HEAD payload to the query without sending a body', async () => {
-  const { data } = await request.head('/testing', payload);
+  const data: null = (await request.head('/testing', payload)).data;
   expect(data).toBeNull();
 });
 
