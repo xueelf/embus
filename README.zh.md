@@ -167,6 +167,8 @@ interface RequestConfig extends RequestInit {
 type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 ```
 
+HTTP 方法名区分大小写。[RFC 9110 第 9.1 节](https://www.rfc-editor.org/rfc/rfc9110#section-9.1) 约定标准方法使用全大写的 US-ASCII 字母，因此 Embus 的 `method` 仅接受 `GET`、`DELETE`、`HEAD`、`POST`、`PUT` 和 `PATCH`。各方法的含义与适用场景参见 [MDN：HTTP 请求方法](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Methods)。
+
 - 使用配置对象发起请求时必须提供 `url`。
 - `origin` 是相对请求 URL 的基础地址。
 - `payload` 表示 query 参数或请求体。
@@ -240,7 +242,8 @@ HTTP 错误的 `cause` 是 `Response`，解析错误的 `cause` 是原始错误�
 - `embus<T>(url, config?): Promise<Result<T>>`
 - `embus.request<T>(config): Promise<Result<T>>`
 - `embus.request<T>(url, config?): Promise<Result<T>>`
-- `embus.get/delete/head/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.head(url, payload?, options?): Promise<Result<null>>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`

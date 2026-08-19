@@ -167,6 +167,8 @@ interface RequestConfig extends RequestInit {
 type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 ```
 
+HTTP method names are case-sensitive. [Section 9.1 of RFC 9110](https://www.rfc-editor.org/rfc/rfc9110#section-9.1) defines standardized methods by convention using all-uppercase US-ASCII letters, so Embus accepts only `GET`, `DELETE`, `HEAD`, `POST`, `PUT`, and `PATCH` for `method`. See [MDN: HTTP request methods](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods) for their semantics and use cases.
+
 - `url` is required when passing a configuration object.
 - `origin` is a base URL for relative request URLs.
 - `payload` contains query parameters or a request body.
@@ -240,7 +242,8 @@ For HTTP errors, `cause` is the `Response`. For parsing errors, it is the origin
 - `embus<T>(url, config?): Promise<Result<T>>`
 - `embus.request<T>(config): Promise<Result<T>>`
 - `embus.request<T>(url, config?): Promise<Result<T>>`
-- `embus.get/delete/head/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.head(url, payload?, options?): Promise<Result<null>>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`
