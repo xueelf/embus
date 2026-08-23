@@ -43,11 +43,11 @@ Or use an import map:
 ```javascript
 import embus from 'embus';
 
-const { data: users } = await embus('https://api.example.com/users', {
+const users = await embus('https://api.example.com/users', {
   payload: { username: 'example' },
 });
 
-const { data: user } = await embus.post('https://api.example.com/users', {
+const user = await embus.post('https://api.example.com/users', {
   username: 'example',
 });
 ```
@@ -78,7 +78,7 @@ const user = await response.json();
 The same request with Embus is:
 
 ```javascript
-const { data: user } = await embus.post('https://api.example.com/users', {
+const user = await embus.post('https://api.example.com/users', {
   username: 'example',
 });
 ```
@@ -103,7 +103,7 @@ const result = await response.json();
 With Embus, a plain object can be passed directly:
 
 ```javascript
-const { data: result } = await embus.post(
+const result = await embus.post(
   'https://api.example.com/users',
   {
     username: 'example',
@@ -131,7 +131,7 @@ const request = embus.create({
   origin: 'https://api.example.com',
 });
 
-const { data } = await request('/users');
+const data = await request('/users');
 ```
 
 The `Embus` class provides the same methods but is not callable:
@@ -143,7 +143,7 @@ const request = new Embus({
   origin: 'https://api.example.com',
 });
 
-const { data } = await request.get('/users');
+const data = await request.get('/users');
 ```
 
 Instance headers are merged with per-request headers. Per-request values take precedence.
@@ -188,7 +188,7 @@ For other encodings, provide `body` directly.
 
 ## Response
 
-Every request resolves to a `Result<T>`:
+Requests resolve to the parsed response data. Response interceptors receive a `Result<T>` containing the data and response metadata:
 
 ```typescript
 interface Result<T = unknown> {
@@ -213,7 +213,9 @@ request.useRequestInterceptor(config => {
   return { ...config, headers };
 });
 
-request.useResponseInterceptor(result => result.data);
+request.useResponseInterceptor(result => {
+  console.log(result.status);
+});
 ```
 
 A request interceptor must return a `RequestConfig`. A response interceptor may mutate the result or return a value that replaces `result.data`.
@@ -238,12 +240,12 @@ For HTTP errors, `cause` is the `Response`. For parsing errors, it is the origin
 
 ## API
 
-- `embus<T>(config): Promise<Result<T>>`
-- `embus<T>(url, config?): Promise<Result<T>>`
-- `embus.request<T>(config): Promise<Result<T>>`
-- `embus.request<T>(url, config?): Promise<Result<T>>`
-- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
-- `embus.head(url, payload?, options?): Promise<Result<null>>`
+- `embus<T>(config): Promise<T>`
+- `embus<T>(url, config?): Promise<T>`
+- `embus.request<T>(config): Promise<T>`
+- `embus.request<T>(url, config?): Promise<T>`
+- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<T>`
+- `embus.head(url, payload?, options?): Promise<null>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`
