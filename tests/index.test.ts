@@ -1,7 +1,7 @@
 import { serve } from 'bun';
 import { afterAll, expect, test } from 'bun:test';
 
-import embus, { type RequestConfig, Embus, EmbusError } from '~/src';
+import embus, { type RequestConfig, type Result, Embus, EmbusError } from '~/src';
 import { objectToFormData, paramsToString } from '~/src/util';
 
 const payload = {
@@ -121,15 +121,13 @@ test('runs request and response interceptors', async () => {
     ...config,
     payload: { intercepted: true },
   }));
+  instance.useResponseInterceptor<Result<Record<string, boolean>>>(result => result.data);
   instance.useResponseInterceptor<Record<string, boolean>>(result => ({
-    ...result.data,
+    ...result,
     transformed: true,
   }));
 
-  const data = await instance.post<Record<string, boolean>, Record<string, boolean>>(
-    '/anything',
-    payload,
-  );
+  const data: unknown = await instance.post<Record<string, boolean>>('/anything', payload);
 
   expect(data).toEqual({ intercepted: true, transformed: true });
 });
@@ -137,11 +135,14 @@ test('runs request and response interceptors', async () => {
 test('response interceptors preserve falsy return values', async () => {
   const instance = new Embus({ origin: server.url.origin });
   instance.useResponseInterceptor(() => 0);
+  const zero: unknown = await instance.get<string>('/testing', null, { responseType: 'text' });
 
-  expect(await instance.get<string, number>('/testing', null, { responseType: 'text' })).toBe(0);
+  expect(zero).toBe(0);
 
   instance.useResponseInterceptor(() => '');
-  expect(await instance.get<string, string>('/testing', null, { responseType: 'text' })).toBe('');
+  const empty: unknown = await instance.get<string>('/testing', null, { responseType: 'text' });
+
+  expect(empty).toBe('');
 });
 
 test('supports lowercase multipart headers and lets Fetch add the boundary', async () => {

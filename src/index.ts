@@ -36,8 +36,8 @@ export class EmbusError extends Error {
 
 /** Reads or changes the final request configuration before the request is sent. */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-/** Reads a successful result. A returned value replaces the final request result. */
-export type ResponseInterceptor<T = unknown> = (result: Result<T>) => void | T | Promise<void | T>;
+/** Reads the current result. A returned value replaces it. */
+export type ResponseInterceptor<T = Result<unknown>> = (result: T) => unknown | Promise<unknown>;
 
 /** Applies defaults before and after request interceptors run. */
 function applyDefaults(config: RequestConfig): void {
@@ -134,8 +134,8 @@ export class Embus {
   }
 
   /** Registers a response interceptor that runs in registration order. */
-  public useResponseInterceptor<T>(interceptor: ResponseInterceptor<T>): void {
-    this.responseInterceptors.push(interceptor as ResponseInterceptor);
+  public useResponseInterceptor<T = Result<unknown>>(interceptor: ResponseInterceptor<T>): void {
+    this.responseInterceptors.push(interceptor as ResponseInterceptor<unknown>);
   }
 
   /** Creates a callable instance with isolated configuration and interceptors. */
@@ -143,64 +143,64 @@ export class Embus {
     return createInstance(options);
   }
 
-  public get<T = unknown, R = Result<T>>(
+  public get<T = unknown>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<T, R>(url, { ...options, method: 'GET', payload });
+  ): Promise<Result<T>> {
+    return this.request<T>(url, { ...options, method: 'GET', payload });
   }
 
-  public delete<T = unknown, R = Result<T>>(
+  public delete<T = unknown>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<T, R>(url, { ...options, method: 'DELETE', payload });
+  ): Promise<Result<T>> {
+    return this.request<T>(url, { ...options, method: 'DELETE', payload });
   }
 
-  public head<R = Result<null>>(
+  public head(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<null, R>(url, { ...options, method: 'HEAD', payload });
+  ): Promise<Result<null>> {
+    return this.request<null>(url, { ...options, method: 'HEAD', payload });
   }
 
-  public post<T = unknown, R = Result<T>>(
+  public post<T = unknown>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<T, R>(url, { ...options, method: 'POST', payload });
+  ): Promise<Result<T>> {
+    return this.request<T>(url, { ...options, method: 'POST', payload });
   }
 
-  public put<T = unknown, R = Result<T>>(
+  public put<T = unknown>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<T, R>(url, { ...options, method: 'PUT', payload });
+  ): Promise<Result<T>> {
+    return this.request<T>(url, { ...options, method: 'PUT', payload });
   }
 
-  public patch<T = unknown, R = Result<T>>(
+  public patch<T = unknown>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<R> {
-    return this.request<T, R>(url, { ...options, method: 'PATCH', payload });
+  ): Promise<Result<T>> {
+    return this.request<T>(url, { ...options, method: 'PATCH', payload });
   }
 
   /** Sends a request using a complete configuration object or a URL with separate options. */
-  public async request<T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
-  public async request<T = unknown, R = Result<T>>(
+  public async request<T = unknown>(config: RequestConfig): Promise<Result<T>>;
+  public async request<T = unknown>(
     url: string,
     config?: Omit<RequestConfig, 'url'>,
-  ): Promise<R>;
-  public async request<_T, R>(
+  ): Promise<Result<T>>;
+  public async request<T>(
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
-  ): Promise<R> {
+  ): Promise<Result<T>> {
     if (typeof init !== 'string' && (!init || typeof init !== 'object')) {
       throw new EmbusError('Invalid arguments');
     }
@@ -236,40 +236,37 @@ export class Embus {
         cause: response,
       });
     }
-    const result: Result = {
-      data: null,
+    let data: unknown;
+
+    try {
+      data = await parseResponse(response, requestConfig);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new EmbusError(message, { cause: error });
+    }
+    let result: unknown = {
+      data,
       status: response.status,
       config: requestConfig,
       statusText: response.statusText,
       headers: response.headers,
     };
 
-    try {
-      result.data = await parseResponse(response, requestConfig);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new EmbusError(message, { cause: error });
-    }
-
-    let output: unknown = result;
-
     for (const interceptor of this.responseInterceptors) {
       const transformed = await interceptor(result);
 
-      // undefined preserves the current output. Every other value replaces it.
       if (transformed !== undefined) {
-        result.data = transformed;
-        output = transformed;
+        result = transformed;
       }
     }
-    return output as R;
+    return result as Result<T>;
   }
 }
 
 /** A client that is both callable and exposes the `Embus` instance methods. */
 export interface EmbusInstance extends Embus {
-  <T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
-  <T = unknown, R = Result<T>>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<R>;
+  <T = unknown>(config: RequestConfig): Promise<Result<T>>;
+  <T = unknown>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
 }
 
 /** Creates an independent callable client instance. */
