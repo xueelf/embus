@@ -75,33 +75,43 @@ afterAll(() => {
 });
 
 test('requests every supported HTTP method', async () => {
-  expect(await request.get<string>('/testing', null, { responseType: 'text' })).toBe('GET');
-  expect(await request.delete<string>('/testing', null, { responseType: 'text' })).toBe('DELETE');
-  expect(await request.head('/testing')).toBeNull();
-  expect(await request.post<string>('/testing', null, { responseType: 'text' })).toBe('POST');
-  expect(await request.put<string>('/testing', null, { responseType: 'text' })).toBe('PUT');
-  expect(await request.patch<string>('/testing', null, { responseType: 'text' })).toBe('PATCH');
+  expect((await request.get('/testing', null, { responseType: 'text' })).data).toBe('GET');
+  expect((await request.delete('/testing', null, { responseType: 'text' })).data).toBe('DELETE');
+  expect((await request.head('/testing')).data).toBeNull();
+  expect((await request.post('/testing', null, { responseType: 'text' })).data).toBe('POST');
+  expect((await request.put('/testing', null, { responseType: 'text' })).data).toBe('PUT');
+  expect((await request.patch('/testing', null, { responseType: 'text' })).data).toBe('PATCH');
 });
 
 test('serializes query and JSON payloads', async () => {
-  expect(await request.get<typeof payload>('/anything', payload)).toEqual(payload);
-  expect(await request.delete<typeof payload>('/anything', payload)).toEqual(payload);
-  expect(await request.post<typeof payload>('/anything', payload)).toEqual(payload);
-  expect(await request.put<typeof payload>('/anything', payload)).toEqual(payload);
-  expect(await request.patch<typeof payload>('/anything', payload)).toEqual(payload);
+  expect((await request.get('/anything', payload)).data).toEqual(payload);
+  expect((await request.delete('/anything', payload)).data).toEqual(payload);
+  expect((await request.post('/anything', payload)).data).toEqual(payload);
+  expect((await request.put('/anything', payload)).data).toEqual(payload);
+  expect((await request.patch('/anything', payload)).data).toEqual(payload);
 });
 
 test('default export creates callable instances', async () => {
   const instance = embus.create({ origin: server.url.origin });
 
-  expect(await instance<string>('/testing', { responseType: 'text' })).toBe('GET');
+  expect((await instance('/testing', { responseType: 'text' })).data).toBe('GET');
   expect(
-    await instance<string>({
-      origin: server.url.origin,
-      url: '/testing',
-      responseType: 'text',
-    }),
+    (
+      await instance({
+        origin: server.url.origin,
+        url: '/testing',
+        responseType: 'text',
+      })
+    ).data,
   ).toBe('GET');
+});
+
+test('returns response metadata by default', async () => {
+  const result = await request.get<string>('/testing', null, { responseType: 'text' });
+
+  expect(result.data).toBe('GET');
+  expect(result.status).toBe(200);
+  expect(result.headers).toBeInstanceOf(Headers);
 });
 
 test('runs request and response interceptors', async () => {
@@ -116,7 +126,10 @@ test('runs request and response interceptors', async () => {
     transformed: true,
   }));
 
-  const data = await instance.post<Record<string, boolean>>('/anything', payload);
+  const data = await instance.post<Record<string, boolean>, Record<string, boolean>>(
+    '/anything',
+    payload,
+  );
 
   expect(data).toEqual({ intercepted: true, transformed: true });
 });
@@ -125,14 +138,14 @@ test('response interceptors preserve falsy return values', async () => {
   const instance = new Embus({ origin: server.url.origin });
   instance.useResponseInterceptor(() => 0);
 
-  expect(await instance.get<number>('/testing', null, { responseType: 'text' })).toBe(0);
+  expect(await instance.get<string, number>('/testing', null, { responseType: 'text' })).toBe(0);
 
   instance.useResponseInterceptor(() => '');
-  expect(await instance.get<string>('/testing', null, { responseType: 'text' })).toBe('');
+  expect(await instance.get<string, string>('/testing', null, { responseType: 'text' })).toBe('');
 });
 
 test('supports lowercase multipart headers and lets Fetch add the boundary', async () => {
-  const data = await request.post<typeof payload>('/multipart', payload, {
+  const { data } = await request.post<typeof payload>('/multipart', payload, {
     headers: { 'content-type': 'multipart/form-data' },
   });
 
@@ -147,7 +160,7 @@ test('merges instance and request headers and accepts AbortSignal', async () => 
     signal: controller.signal,
   });
 
-  const data = await instance.get<{
+  const { data } = await instance.get<{
     authorization: string;
     contentType: string | null;
     custom: string;
@@ -163,7 +176,7 @@ test('merges instance and request headers and accepts AbortSignal', async () => 
 });
 
 test('preserves JSON content-type parameters', async () => {
-  const data = await request.post<{ body: object; contentType: string }>('/inspect', payload, {
+  const { data } = await request.post<{ body: object; contentType: string }>('/inspect', payload, {
     headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 
@@ -174,7 +187,7 @@ test('preserves JSON content-type parameters', async () => {
 });
 
 test('explicit bodies, including null, take precedence over payloads', async () => {
-  const data = await request.post<string>('/body', payload, {
+  const { data } = await request.post<string>('/body', payload, {
     body: 'raw',
     headers: { 'content-type': 'text/plain' },
     responseType: 'text',
@@ -182,7 +195,7 @@ test('explicit bodies, including null, take precedence over payloads', async () 
 
   expect(data).toBe('raw');
 
-  const empty = await request.post<string>('/body', payload, {
+  const { data: empty } = await request.post<string>('/body', payload, {
     body: null,
     responseType: 'text',
   });
@@ -191,18 +204,18 @@ test('explicit bodies, including null, take precedence over payloads', async () 
 });
 
 test('adds HEAD payload to the query without sending a body', async () => {
-  const data: null = await request.head('/testing', payload);
+  const data: null = (await request.head('/testing', payload)).data;
   expect(data).toBeNull();
 });
 
 test('inserts query parameters before a URL fragment', async () => {
-  const data = await request.get<typeof payload>('/anything#section', payload);
+  const { data } = await request.get<typeof payload>('/anything#section', payload);
   expect(data).toEqual(payload);
 });
 
 test('joins origins and relative paths without requiring slashes', async () => {
   const instance = new Embus({ origin: server.url.origin });
-  const data = await instance.get<string>('testing', null, {
+  const { data } = await instance.get<string>('testing', null, {
     responseType: 'text',
   });
 
@@ -210,13 +223,13 @@ test('joins origins and relative paths without requiring slashes', async () => {
 });
 
 test('returns null for empty successful responses', async () => {
-  const data = await request.delete<null>('/empty');
+  const { data } = await request.delete<null>('/empty');
 
   expect(data).toBeNull();
 });
 
 test('uses the generic type for response data', async () => {
-  const data = await request.get<string>('/testing', null, {
+  const { data } = await request.get<string>('/testing', null, {
     responseType: 'text',
   });
   const text: string = data;

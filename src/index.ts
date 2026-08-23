@@ -36,7 +36,7 @@ export class EmbusError extends Error {
 
 /** Reads or changes the final request configuration before the request is sent. */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-/** Reads a successful result. A returned value replaces `result.data`. */
+/** Reads a successful result. A returned value replaces the final request result. */
 export type ResponseInterceptor<T = unknown> = (result: Result<T>) => void | T | Promise<void | T>;
 
 /** Applies defaults before and after request interceptors run. */
@@ -143,57 +143,64 @@ export class Embus {
     return createInstance(options);
   }
 
-  public get<T = unknown>(
+  public get<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<T> {
-    return this.request(url, { ...options, method: 'GET', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'GET', payload });
   }
 
-  public delete<T = unknown>(
+  public delete<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<T> {
-    return this.request(url, { ...options, method: 'DELETE', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'DELETE', payload });
   }
 
-  public head(url: string, payload?: object | null, options?: RequestOptions): Promise<null> {
-    return this.request<null>(url, { ...options, method: 'HEAD', payload });
-  }
-
-  public post<T = unknown>(
+  public head<R = Result<null>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<T> {
-    return this.request(url, { ...options, method: 'POST', payload });
+  ): Promise<R> {
+    return this.request<null, R>(url, { ...options, method: 'HEAD', payload });
   }
 
-  public put<T = unknown>(
+  public post<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<T> {
-    return this.request(url, { ...options, method: 'PUT', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'POST', payload });
   }
 
-  public patch<T = unknown>(
+  public put<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<T> {
-    return this.request(url, { ...options, method: 'PATCH', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'PUT', payload });
+  }
+
+  public patch<T = unknown, R = Result<T>>(
+    url: string,
+    payload?: object | null,
+    options?: RequestOptions,
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'PATCH', payload });
   }
 
   /** Sends a request using a complete configuration object or a URL with separate options. */
-  public async request<T = unknown>(config: RequestConfig): Promise<T>;
-  public async request<T = unknown>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<T>;
-  public async request<T>(
+  public async request<T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
+  public async request<T = unknown, R = Result<T>>(
+    url: string,
+    config?: Omit<RequestConfig, 'url'>,
+  ): Promise<R>;
+  public async request<_T, R>(
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
-  ): Promise<T> {
+  ): Promise<R> {
     if (typeof init !== 'string' && (!init || typeof init !== 'object')) {
       throw new EmbusError('Invalid arguments');
     }
@@ -244,22 +251,25 @@ export class Embus {
       throw new EmbusError(message, { cause: error });
     }
 
+    let output: unknown = result;
+
     for (const interceptor of this.responseInterceptors) {
       const transformed = await interceptor(result);
 
-      // undefined preserves data. Every other return value replaces it.
+      // undefined preserves the current output. Every other value replaces it.
       if (transformed !== undefined) {
         result.data = transformed;
+        output = transformed;
       }
     }
-    return result.data as T;
+    return output as R;
   }
 }
 
 /** A client that is both callable and exposes the `Embus` instance methods. */
 export interface EmbusInstance extends Embus {
-  <T = unknown>(config: RequestConfig): Promise<T>;
-  <T = unknown>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<T>;
+  <T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
+  <T = unknown, R = Result<T>>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<R>;
 }
 
 /** Creates an independent callable client instance. */
