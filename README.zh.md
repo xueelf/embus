@@ -221,15 +221,7 @@ request.useResponseInterceptor(result => {
 const users = await request.get('/users');
 ```
 
-请求拦截器必须返回 `RequestConfig`。响应拦截器可以修改 `Result`；如果返回非 `undefined` 值，该值会成为请求的最终返回结果，并作为 `result.data` 传递给后续响应拦截器。上例中的 `users` 因此是响应数据，而不是 `Result`。
-
-TypeScript 无法根据运行时注册的拦截器自动改变请求方法的返回类型。使用第二个泛型参数指定最终返回类型：
-
-```typescript
-request.useResponseInterceptor(result => result.data);
-
-const users = await request.get<User[], User[]>('/users');
-```
+请求拦截器必须返回 `RequestConfig`。响应拦截器返回非 `undefined` 值时，该值会替换当前结果并传递给后续响应拦截器。上例中的 `users` 因此是响应数据，而不是 `Result`。
 
 ## 错误
 
@@ -251,12 +243,12 @@ HTTP 错误的 `cause` 是 `Response`，解析错误的 `cause` 是原始错误�
 
 ## API
 
-- `embus<T, R = Result<T>>(config): Promise<R>`
-- `embus<T, R = Result<T>>(url, config?): Promise<R>`
-- `embus.request<T, R = Result<T>>(config): Promise<R>`
-- `embus.request<T, R = Result<T>>(url, config?): Promise<R>`
-- `embus.get/delete/post/put/patch<T, R = Result<T>>(url, payload?, options?): Promise<R>`
-- `embus.head<R = Result<null>>(url, payload?, options?): Promise<R>`
+- `embus<T>(config): Promise<Result<T>>`
+- `embus<T>(url, config?): Promise<Result<T>>`
+- `embus.request<T>(config): Promise<Result<T>>`
+- `embus.request<T>(url, config?): Promise<Result<T>>`
+- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.head(url, payload?, options?): Promise<Result<null>>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`

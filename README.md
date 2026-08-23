@@ -221,15 +221,7 @@ request.useResponseInterceptor(result => {
 const users = await request.get('/users');
 ```
 
-A request interceptor must return a `RequestConfig`. A response interceptor may mutate the `Result`. If it returns a value other than `undefined`, that value becomes the final request result and is passed to later response interceptors as `result.data`. In the example above, `users` is therefore the response data rather than a `Result`.
-
-TypeScript cannot change a request method's return type based on an interceptor registered at runtime. Use the second generic parameter to specify the final return type:
-
-```typescript
-request.useResponseInterceptor(result => result.data);
-
-const users = await request.get<User[], User[]>('/users');
-```
+A request interceptor must return a `RequestConfig`. When a response interceptor returns a value other than `undefined`, that value replaces the current result and is passed to later response interceptors. In the example above, `users` is therefore the response data rather than a `Result`.
 
 ## Errors
 
@@ -251,12 +243,12 @@ For HTTP errors, `cause` is the `Response`. For parsing errors, it is the origin
 
 ## API
 
-- `embus<T, R = Result<T>>(config): Promise<R>`
-- `embus<T, R = Result<T>>(url, config?): Promise<R>`
-- `embus.request<T, R = Result<T>>(config): Promise<R>`
-- `embus.request<T, R = Result<T>>(url, config?): Promise<R>`
-- `embus.get/delete/post/put/patch<T, R = Result<T>>(url, payload?, options?): Promise<R>`
-- `embus.head<R = Result<null>>(url, payload?, options?): Promise<R>`
+- `embus<T>(config): Promise<Result<T>>`
+- `embus<T>(url, config?): Promise<Result<T>>`
+- `embus.request<T>(config): Promise<Result<T>>`
+- `embus.request<T>(url, config?): Promise<Result<T>>`
+- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
+- `embus.head(url, payload?, options?): Promise<Result<null>>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`
