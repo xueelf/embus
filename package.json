@@ -1,6 +1,6 @@
 {
   "name": "embus",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A lightweight JavaScript HTTP client based on the Fetch API.",
   "keywords": [
     "api",
