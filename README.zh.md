@@ -43,11 +43,11 @@ npm i embus
 ```javascript
 import embus from 'embus';
 
-const users = await embus('https://api.example.com/users', {
+const { data: users } = await embus('https://api.example.com/users', {
   payload: { username: 'example' },
 });
 
-const user = await embus.post('https://api.example.com/users', {
+const { data: user } = await embus.post('https://api.example.com/users', {
   username: 'example',
 });
 ```
@@ -78,7 +78,7 @@ const user = await response.json();
 使用 Embus 完成相同请求：
 
 ```javascript
-const user = await embus.post('https://api.example.com/users', {
+const { data: user } = await embus.post('https://api.example.com/users', {
   username: 'example',
 });
 ```
@@ -103,7 +103,7 @@ const result = await response.json();
 使用 Embus 可以直接传入普通对象：
 
 ```javascript
-const result = await embus.post(
+const { data: result } = await embus.post(
   'https://api.example.com/users',
   {
     username: 'example',
@@ -131,7 +131,7 @@ const request = embus.create({
   origin: 'https://api.example.com',
 });
 
-const data = await request('/users');
+const { data } = await request('/users');
 ```
 
 `Embus` 类提供相同的方法，但类实例本身不可调用：
@@ -143,7 +143,7 @@ const request = new Embus({
   origin: 'https://api.example.com',
 });
 
-const data = await request.get('/users');
+const { data } = await request.get('/users');
 ```
 
 实例请求头会与单次请求头合并，同名请求头以单次请求为准。
@@ -188,7 +188,7 @@ HTTP 方法名区分大小写。[RFC 9110 第 9.1 节](https://www.rfc-editor.or
 
 ## 响应
 
-请求直接返回解析后的响应数据。响应拦截器接收包含数据和响应元数据的 `Result<T>`：
+默认情况下，每个请求均返回包含解析数据和响应元数据的 `Result<T>`：
 
 ```typescript
 interface Result<T = unknown> {
@@ -215,10 +215,21 @@ request.useRequestInterceptor(config => {
 
 request.useResponseInterceptor(result => {
   console.log(result.status);
+  return result.data;
 });
+
+const users = await request.get('/users');
 ```
 
-请求拦截器必须返回 `RequestConfig`。响应拦截器可以修改结果，也可以返回一个值替换 `result.data`。
+请求拦截器必须返回 `RequestConfig`。响应拦截器可以修改 `Result`；如果返回非 `undefined` 值，该值会成为请求的最终返回结果，并作为 `result.data` 传递给后续响应拦截器。上例中的 `users` 因此是响应数据，而不是 `Result`。
+
+TypeScript 无法根据运行时注册的拦截器自动改变请求方法的返回类型。使用第二个泛型参数指定最终返回类型：
+
+```typescript
+request.useResponseInterceptor(result => result.data);
+
+const users = await request.get<User[], User[]>('/users');
+```
 
 ## 错误
 
@@ -240,12 +251,12 @@ HTTP 错误的 `cause` 是 `Response`，解析错误的 `cause` 是原始错误�
 
 ## API
 
-- `embus<T>(config): Promise<T>`
-- `embus<T>(url, config?): Promise<T>`
-- `embus.request<T>(config): Promise<T>`
-- `embus.request<T>(url, config?): Promise<T>`
-- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<T>`
-- `embus.head(url, payload?, options?): Promise<null>`
+- `embus<T, R = Result<T>>(config): Promise<R>`
+- `embus<T, R = Result<T>>(url, config?): Promise<R>`
+- `embus.request<T, R = Result<T>>(config): Promise<R>`
+- `embus.request<T, R = Result<T>>(url, config?): Promise<R>`
+- `embus.get/delete/post/put/patch<T, R = Result<T>>(url, payload?, options?): Promise<R>`
+- `embus.head<R = Result<null>>(url, payload?, options?): Promise<R>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`
