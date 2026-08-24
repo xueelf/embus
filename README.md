@@ -217,11 +217,24 @@ request.useResponseInterceptor(result => {
   console.log(result.status);
   return result.data;
 });
-
-const users = await request.get('/users');
 ```
 
-A request interceptor must return a `RequestConfig`. When a response interceptor returns a value other than `undefined`, that value replaces the current result and is passed to later response interceptors. In the example above, `users` is therefore the response data rather than a `Result`.
+A request interceptor must return a `RequestConfig`. When a response interceptor returns a value other than `undefined`, that value replaces the current result and is passed to later response interceptors.
+
+When wrapping an API, use the function return type to declare the result after interception:
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+function getUsers(): Promise<User[]> {
+  return request.get('/users');
+}
+```
+
+The request infers its final return type from `Promise<User[]>`, which must match the actual value returned by the response interceptor. An explicit `request.get<User[]>()` still has the static type `Promise<Result<User[]>>`, so an unwrapped API should not also specify the request generic.
 
 ## Errors
 
@@ -243,12 +256,12 @@ For HTTP errors, `cause` is the `Response`. For parsing errors, it is the origin
 
 ## API
 
-- `embus<T>(config): Promise<Result<T>>`
-- `embus<T>(url, config?): Promise<Result<T>>`
-- `embus.request<T>(config): Promise<Result<T>>`
-- `embus.request<T>(url, config?): Promise<Result<T>>`
-- `embus.get/delete/post/put/patch<T>(url, payload?, options?): Promise<Result<T>>`
-- `embus.head(url, payload?, options?): Promise<Result<null>>`
+- `embus<T, R = Result<T>>(config): Promise<R>`
+- `embus<T, R = Result<T>>(url, config?): Promise<R>`
+- `embus.request<T, R = Result<T>>(config): Promise<R>`
+- `embus.request<T, R = Result<T>>(url, config?): Promise<R>`
+- `embus.get/delete/post/put/patch<T, R = Result<T>>(url, payload?, options?): Promise<R>`
+- `embus.head<R = Result<null>>(url, payload?, options?): Promise<R>`
 - `embus.create(options?): EmbusInstance`
 - `embus.useRequestInterceptor(callback): void`
 - `embus.useResponseInterceptor(callback): void`
