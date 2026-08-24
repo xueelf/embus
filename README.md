@@ -238,7 +238,7 @@ The request infers its final return type from `Promise<User[]>`, which must matc
 
 ## Errors
 
-Responses outside the 200–299 range and response parsing failures throw `EmbusError`:
+Invalid arguments or URLs, and responses outside the 200–299 range throw `EmbusError`:
 
 ```javascript
 import embus, { EmbusError } from 'embus';
@@ -246,13 +246,13 @@ import embus, { EmbusError } from 'embus';
 try {
   await embus.get('https://api.example.com/users');
 } catch (error) {
-  if (error instanceof EmbusError) {
-    console.error(error.message, error.cause);
+  if (error instanceof EmbusError && error.response) {
+    console.error(error.response.status);
   }
 }
 ```
 
-For HTTP errors, `cause` is the `Response`. For parsing errors, it is the original error. Network errors from `fetch` are not wrapped.
+For HTTP errors, `response` is the original `Response`. Argument and URL errors do not have a `response`. Response parsing errors, network errors from `fetch`, and interceptor errors are not wrapped.
 
 ## API
 

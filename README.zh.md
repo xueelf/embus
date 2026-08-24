@@ -238,7 +238,7 @@ function getUsers(): Promise<User[]> {
 
 ## 错误
 
-HTTP 响应状态码不在 200–299 范围内或响应解析失败时，会抛出 `EmbusError`：
+参数或 URL 无效，以及 HTTP 响应状态码不在 200–299 范围内时，会抛出 `EmbusError`：
 
 ```javascript
 import embus, { EmbusError } from 'embus';
@@ -246,13 +246,13 @@ import embus, { EmbusError } from 'embus';
 try {
   await embus.get('https://api.example.com/users');
 } catch (error) {
-  if (error instanceof EmbusError) {
-    console.error(error.message, error.cause);
+  if (error instanceof EmbusError && error.response) {
+    console.error(error.response.status);
   }
 }
 ```
 
-HTTP 错误的 `cause` 是 `Response`，解析错误的 `cause` 是原始错误。`fetch` 产生的网络错误不会被包装。
+HTTP 错误的 `response` 是原始 `Response`，参数或 URL 错误没有 `response`。响应解析错误、`fetch` 产生的网络错误和拦截器错误不会被包装。
 
 ## API
 
