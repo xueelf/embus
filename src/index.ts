@@ -143,64 +143,64 @@ export class Embus {
     return createInstance(options);
   }
 
-  public get<T = unknown>(
+  public get<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request<T>(url, { ...options, method: 'GET', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'GET', payload });
   }
 
-  public delete<T = unknown>(
+  public delete<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request<T>(url, { ...options, method: 'DELETE', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'DELETE', payload });
   }
 
-  public head(
+  public head<R = Result<null>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<null>> {
-    return this.request<null>(url, { ...options, method: 'HEAD', payload });
+  ): Promise<R> {
+    return this.request<null, R>(url, { ...options, method: 'HEAD', payload });
   }
 
-  public post<T = unknown>(
+  public post<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request<T>(url, { ...options, method: 'POST', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'POST', payload });
   }
 
-  public put<T = unknown>(
+  public put<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request<T>(url, { ...options, method: 'PUT', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'PUT', payload });
   }
 
-  public patch<T = unknown>(
+  public patch<T = unknown, R = Result<T>>(
     url: string,
     payload?: object | null,
     options?: RequestOptions,
-  ): Promise<Result<T>> {
-    return this.request<T>(url, { ...options, method: 'PATCH', payload });
+  ): Promise<R> {
+    return this.request<T, R>(url, { ...options, method: 'PATCH', payload });
   }
 
   /** Sends a request using a complete configuration object or a URL with separate options. */
-  public async request<T = unknown>(config: RequestConfig): Promise<Result<T>>;
-  public async request<T = unknown>(
+  public async request<T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
+  public async request<T = unknown, R = Result<T>>(
     url: string,
     config?: Omit<RequestConfig, 'url'>,
-  ): Promise<Result<T>>;
-  public async request<T>(
+  ): Promise<R>;
+  public async request(
     init: string | RequestConfig,
     config?: Omit<RequestConfig, 'url'>,
-  ): Promise<Result<T>> {
+  ): Promise<unknown> {
     if (typeof init !== 'string' && (!init || typeof init !== 'object')) {
       throw new EmbusError('Invalid arguments');
     }
@@ -259,14 +259,14 @@ export class Embus {
         result = transformed;
       }
     }
-    return result as Result<T>;
+    return result;
   }
 }
 
 /** A client that is both callable and exposes the `Embus` instance methods. */
 export interface EmbusInstance extends Embus {
-  <T = unknown>(config: RequestConfig): Promise<Result<T>>;
-  <T = unknown>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<Result<T>>;
+  <T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
+  <T = unknown, R = Result<T>>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<R>;
 }
 
 /** Creates an independent callable client instance. */

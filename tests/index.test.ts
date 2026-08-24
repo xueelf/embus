@@ -121,13 +121,13 @@ test('runs request and response interceptors', async () => {
     ...config,
     payload: { intercepted: true },
   }));
-  instance.useResponseInterceptor<Result<Record<string, boolean>>>(result => result.data);
-  instance.useResponseInterceptor<Record<string, boolean>>(result => ({
-    ...result,
+  instance.useResponseInterceptor<Result<Record<string, boolean>>>(result => ({
+    ...result.data,
     transformed: true,
   }));
 
-  const data: unknown = await instance.post<Record<string, boolean>>('/anything', payload);
+  const getData = (): Promise<Record<string, boolean>> => instance.post('/anything', payload);
+  const data = await getData();
 
   expect(data).toEqual({ intercepted: true, transformed: true });
 });
@@ -135,12 +135,12 @@ test('runs request and response interceptors', async () => {
 test('response interceptors preserve falsy return values', async () => {
   const instance = new Embus({ origin: server.url.origin });
   instance.useResponseInterceptor(() => 0);
-  const zero: unknown = await instance.get<string>('/testing', null, { responseType: 'text' });
+  const zero: number = await instance.get('/testing', null, { responseType: 'text' });
 
   expect(zero).toBe(0);
 
   instance.useResponseInterceptor(() => '');
-  const empty: unknown = await instance.get<string>('/testing', null, { responseType: 'text' });
+  const empty: string = await instance.get('/testing', null, { responseType: 'text' });
 
   expect(empty).toBe('');
 });
