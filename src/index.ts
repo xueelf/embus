@@ -26,10 +26,13 @@ export interface Result<T = unknown> {
   headers: Response['headers'];
 }
 
-/** Error type for invalid configuration, HTTP status errors, and response parsing failures. */
+/** Error type for invalid arguments or URLs, and unsuccessful HTTP responses. */
 export class EmbusError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+  constructor(
+    message: string,
+    public readonly response?: Response,
+  ) {
+    super(message);
     this.name = 'EmbusError';
   }
 }
@@ -232,20 +235,10 @@ export class Embus {
     const response = await fetch(href, requestConfig);
 
     if (!response.ok) {
-      throw new EmbusError(`${response.status} ${response.statusText}`, {
-        cause: response,
-      });
-    }
-    let data: unknown;
-
-    try {
-      data = await parseResponse(response, requestConfig);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new EmbusError(message, { cause: error });
+      throw new EmbusError(`${response.status} ${response.statusText}`, response);
     }
     let result: unknown = {
-      data,
+      data: await parseResponse(response, requestConfig),
       status: response.status,
       config: requestConfig,
       statusText: response.statusText,

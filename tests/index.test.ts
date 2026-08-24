@@ -14,7 +14,13 @@ const server = serve({
     '/testing': {
       GET: () => new Response('GET'),
       DELETE: () => new Response('DELETE'),
-      HEAD: () => new Response(),
+      HEAD: req =>
+        new Response(null, {
+          headers: {
+            'x-request-body': String(req.body),
+            'x-query': new URL(req.url).searchParams.get('foo') ?? '',
+          },
+        }),
       POST: () => new Response('POST'),
       PUT: () => new Response('PUT'),
       PATCH: () => new Response('PATCH'),
@@ -205,8 +211,11 @@ test('explicit bodies, including null, take precedence over payloads', async () 
 });
 
 test('adds HEAD payload to the query without sending a body', async () => {
-  const data: null = (await request.head('/testing', payload)).data;
-  expect(data).toBeNull();
+  const result = await request.head('/testing', payload);
+
+  expect(result.data).toBeNull();
+  expect(result.headers.get('x-query')).toBe('bar');
+  expect(result.headers.get('x-request-body')).toBe('null');
 });
 
 test('inserts query parameters before a URL fragment', async () => {
@@ -238,8 +247,18 @@ test('uses the generic type for response data', async () => {
   expect(text).toBe('GET');
 });
 
-test('throws an exported EmbusError for unsuccessful responses', async () => {
-  await expect(request.get('/error')).rejects.toBeInstanceOf(EmbusError);
+test('exposes the response on unsuccessful HTTP errors', async () => {
+  const error: unknown = await request.get('/error').catch((error: unknown) => error);
+
+  if (!(error instanceof EmbusError)) {
+    throw error;
+  }
+  expect(error.response).toBeInstanceOf(Response);
+  expect(error.response?.status).toBe(418);
+});
+
+test('preserves native response parsing errors', async () => {
+  await expect(request.get('/testing')).rejects.toBeInstanceOf(SyntaxError);
 });
 
 test('rejects request objects without a URL', async () => {
