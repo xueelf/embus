@@ -5,8 +5,8 @@
     "": {
       "name": "embus",
       "devDependencies": {
-        "@commitlint/cli": "^21.2.1",
-        "@commitlint/config-conventional": "^21.2.0",
+        "@commitlint/cli": "^21.2.2",
+        "@commitlint/config-conventional": "^21.2.2",
         "@commitlint/types": "^21.2.0",
         "@eslint/js": "^10.0.1",
         "@types/bun": "^1.3.14",
@@ -14,8 +14,8 @@
         "eslint": "^10.8.1",
         "husky": "^9.1.7",
         "prettier": "^3.9.6",
-        "prettier-plugin-sort": "^1.0.1",
-        "typescript-eslint": "^8.66.0",
+        "prettier-plugin-sort": "^1.1.0",
+        "typescript-eslint": "^8.67.0",
       },
       "peerDependencies": {
         "typescript": "^6.0.3",
@@ -293,7 +293,7 @@
 
     "prettier": ["prettier@3.9.6", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g=="],
 
-    "prettier-plugin-sort": ["prettier-plugin-sort@1.1.0", "", { "dependencies": { "get-tsconfig": "^4.14.0", "semver": "^7.8.5" }, "peerDependencies": { "prettier": ">=3.9.0 <4" } }, "sha512-C7uYHwCqfhOjtfAEFPpzc8Y75sTYJzTC5f8xMlf1gx/egCExTy5hUQXpf0d/tkwOKOkD3MeAeYB17OBhcObqkQ=="],
+    "prettier-plugin-sort": ["prettier-plugin-sort@1.1.1", "", { "dependencies": { "get-tsconfig": "^4.14.0", "semver": "^7.8.5" }, "peerDependencies": { "prettier": ">=3.9.0 <4" } }, "sha512-htG6wwjMmVzu3lPBo+4unMkq/A5+DJHMJVSi+l8cEt9/aAATNuUfOJJOxiI7mVIwdndJPMNgQ8/VfvOTuVIg3A=="],
 
     "punycode": ["punycode@2.3.1", "", {}, "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="],
 
