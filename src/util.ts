@@ -1,35 +1,25 @@
-/** Appends Blob and File values unchanged, and converts other values to strings. */
-function appendFormValue(formData: FormData, key: string, value: unknown): void {
-  if (value instanceof Blob) {
-    formData.append(key, value);
-    return;
+/** 将数组展开为同名字段，并忽略 undefined。 */
+function* fields(payload: object): Generator<[string, unknown]> {
+  for (const [key, value] of Object.entries(payload)) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (item !== undefined) {
+        yield [key, item];
+      }
+    }
   }
-  formData.append(key, String(value));
 }
 
-/** Converts an object to FormData, using repeated fields for arrays and skipping undefined. */
+/** 将对象转换为 FormData，数组使用同名字段，并忽略 undefined。 */
 export function objectToFormData(payload: object): FormData {
   const formData = new FormData();
 
-  for (const [key, value] of Object.entries(payload)) {
-    if (value === undefined) {
-      continue;
-    }
-
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (item !== undefined) {
-          appendFormValue(formData, key, item);
-        }
-      }
-      continue;
-    }
-    appendFormValue(formData, key, value);
+  for (const [key, value] of fields(payload)) {
+    formData.append(key, value instanceof Blob ? value : String(value));
   }
   return formData;
 }
 
-/** Converts an object to a query string, using repeated parameters for arrays. */
+/** 将对象转换为查询字符串，数组使用同名参数。 */
 export function paramsToString(data: unknown): string {
   if (!data || typeof data !== 'object') {
     return '';
@@ -40,19 +30,7 @@ export function paramsToString(data: unknown): string {
   }
   const params = new URLSearchParams();
 
-  for (const [key, value] of Object.entries(data)) {
-    if (value === undefined) {
-      continue;
-    }
-
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (item !== undefined) {
-          params.append(key, String(item));
-        }
-      }
-      continue;
-    }
+  for (const [key, value] of fields(data)) {
     params.append(key, String(value));
   }
   return params.toString();

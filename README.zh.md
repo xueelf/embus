@@ -52,7 +52,7 @@ const { data: user } = await embus.post('https://api.example.com/users', {
 });
 ```
 
-GET 和 HEAD 请求会将 `payload` 转换为 query 参数，其他请求默认编码为 JSON。
+GET 和 HEAD 请求会将 `payload` 转换为 query 参数，其他请求默认将普通对象编码为 JSON。
 
 ### 与 Fetch 对比
 
@@ -146,7 +146,7 @@ const request = new Embus({
 const { data } = await request.get('/users');
 ```
 
-实例请求头会与单次请求头合并，同名请求头以单次请求为准。
+实例在创建时浅复制顶层选项，并复制请求头。`body`、`signal` 等对象仍保留原引用。实例请求头会与单次请求头合并，同名请求头以单次请求为准。
 
 ## 配置
 
@@ -170,7 +170,7 @@ type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 HTTP 方法名区分大小写。[RFC 9110 第 9.1 节](https://www.rfc-editor.org/rfc/rfc9110#section-9.1) 约定标准方法使用全大写的 US-ASCII 字母，因此 Embus 的 `method` 仅接受 `GET`、`DELETE`、`HEAD`、`POST`、`PUT` 和 `PATCH`。各方法的含义与适用场景参见 [MDN：HTTP 请求方法](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Reference/Methods)。
 
 - 使用配置对象发起请求时必须提供 `url`。
-- `origin` 是相对请求 URL 的基础地址。
+- `origin` 是相对请求 URL 的绝对基础地址，其路径按目录处理。例如，`origin: 'https://example.com/api'` 配合 `url: 'users'` 会解析为 `/api/users`。`url` 以斜杠开头时，从主机根路径解析。
 - `payload` 表示 query 参数或请求体。
 - `responseType` 默认为 `json`。
 - 请求方法快捷函数的第三个参数接受 `RequestOptions`。
@@ -180,11 +180,14 @@ HTTP 方法名区分大小写。[RFC 9110 第 9.1 节](https://www.rfc-editor.or
 | 请求                                                              | 行为                                                   |
 | ----------------------------------------------------------------- | ------------------------------------------------------ |
 | GET 或 HEAD                                                       | 将 `payload` 追加为 query 参数                         |
-| 未设置 `Content-Type`、`application/json` 或 `application/*+json` | 使用 `JSON.stringify` 序列化 `payload`                 |
+| 未设置 `Content-Type`、`application/json` 或 `application/*+json` | 使用 `JSON.stringify` 序列化非 `FormData` 的 payload   |
+| `FormData` payload                                                | 直接发送表单，由 Fetch 设置 boundary                   |
 | `multipart/form-data`                                             | 将 `payload` 转换为 `FormData`，由 Fetch 设置 boundary |
 | 显式提供 `body`                                                   | 直接发送 `body`，不再序列化 `payload`                  |
 
-其他编码格式请直接提供 `body`。
+除 GET 和 HEAD 外，`FormData` payload 支持不设置 `Content-Type` 或设置为 `multipart/form-data`。Embus 会移除该请求头，由 Fetch 生成 boundary。搭配其他类型会抛出 `EmbusError`，除非显式提供 `body`。GET 和 HEAD 使用 `FormData` payload 会抛出 `EmbusError`，query 参数请使用普通对象或 `URLSearchParams`。
+
+其他编码格式请直接提供 `body`。除 GET 和 HEAD 请求外，如果传入非空 `payload`、指定不支持的 `Content-Type`，且未显式提供 `body`，会在发送请求前抛出 `EmbusError`。
 
 ## 响应
 
@@ -219,7 +222,9 @@ request.useResponseInterceptor(result => {
 });
 ```
 
-请求拦截器必须返回 `RequestConfig`。响应拦截器返回非 `undefined` 值时，该值会替换当前结果并传递给后续响应拦截器。
+请求拦截器必须返回包含 `url` 的完整 `RequestConfig`。返回值会替换之前的配置，因此省略的字段会被移除。只修改部分字段时，请返回 `{ ...config, ...changes }`。Embus 会在第一个请求拦截器执行前和每个请求拦截器执行后，复制并校验配置，并应用 `GET` 和 `json` 默认值。
+
+响应拦截器返回非 `undefined` 值时，该值会替换当前结果并传递给后续响应拦截器。
 
 封装 API 时，可以通过函数返回类型声明拦截器处理后的结果：
 
@@ -238,7 +243,7 @@ function getUsers(): Promise<User[]> {
 
 ## 错误
 
-参数或 URL 无效，以及 HTTP 响应状态码不在 200–299 范围内时，会抛出 `EmbusError`：
+Embus 配置无效、payload 编码不受支持，以及 HTTP 响应状态码不在 200–299 范围内时，会抛出 `EmbusError`：
 
 ```javascript
 import embus, { EmbusError } from 'embus';
@@ -252,7 +257,7 @@ try {
 }
 ```
 
-HTTP 错误的 `response` 是原始 `Response`，参数或 URL 错误没有 `response`。响应解析错误、`fetch` 产生的网络错误和拦截器错误不会被包装。
+HTTP 错误的 `response` 是原始 `Response`，配置和编码错误没有 `response`。URL 解析、请求头、序列化、响应解析和 `fetch`（包括取消请求）产生的原生错误不会被包装。拦截器抛出的错误也会原样传递。
 
 ## API
 

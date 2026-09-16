@@ -52,7 +52,7 @@ const { data: user } = await embus.post('https://api.example.com/users', {
 });
 ```
 
-GET and HEAD payloads become query parameters. Other payloads are encoded as JSON by default.
+GET and HEAD payloads become query parameters. Other requests encode plain object payloads as JSON by default.
 
 ### Compared with Fetch
 
@@ -146,7 +146,7 @@ const request = new Embus({
 const { data } = await request.get('/users');
 ```
 
-Instance headers are merged with per-request headers. Per-request values take precedence.
+Instances shallow-copy the supplied options and copy the headers at creation. Objects such as `body` and `signal` retain their original references. Instance headers are merged with per-request headers. Per-request values take precedence.
 
 ## Configuration
 
@@ -170,7 +170,7 @@ type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
 HTTP method names are case-sensitive. [Section 9.1 of RFC 9110](https://www.rfc-editor.org/rfc/rfc9110#section-9.1) defines standardized methods by convention using all-uppercase US-ASCII letters, so Embus accepts only `GET`, `DELETE`, `HEAD`, `POST`, `PUT`, and `PATCH` for `method`. See [MDN: HTTP request methods](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods) for their semantics and use cases.
 
 - `url` is required when passing a configuration object.
-- `origin` is a base URL for relative request URLs.
+- `origin` is an absolute base URL for relative request URLs. Its pathname is treated as a directory: `origin: 'https://example.com/api'` with `url: 'users'` resolves to `/api/users`. A leading slash in `url` resolves from the host root.
 - `payload` contains query parameters or a request body.
 - `responseType` defaults to `json`.
 - Method helpers accept `RequestOptions` as their third argument.
@@ -180,11 +180,14 @@ HTTP method names are case-sensitive. [Section 9.1 of RFC 9110](https://www.rfc-
 | Request                                                        | Behavior                                                         |
 | -------------------------------------------------------------- | ---------------------------------------------------------------- |
 | GET or HEAD                                                    | Appends `payload` as query parameters                            |
-| No `Content-Type`, `application/json`, or `application/*+json` | Serializes `payload` with `JSON.stringify`                       |
+| No `Content-Type`, `application/json`, or `application/*+json` | Serializes non-`FormData` payloads with `JSON.stringify`         |
+| `FormData` payload                                             | Sends the form directly and lets Fetch set the boundary          |
 | `multipart/form-data`                                          | Converts `payload` to `FormData` and lets Fetch set the boundary |
 | Explicit `body`                                                | Sends `body` unchanged and ignores `payload` serialization       |
 
-For other encodings, provide `body` directly.
+For methods other than GET and HEAD, a `FormData` payload accepts no `Content-Type` or `multipart/form-data`. Embus removes that header so Fetch can generate the boundary. Other content types throw `EmbusError` unless an explicit `body` takes precedence. GET and HEAD reject `FormData` payloads with `EmbusError`. Use a plain object or `URLSearchParams` for query parameters.
+
+For other encodings, provide `body` directly. For methods other than GET and HEAD, passing a non-null `payload` with an unsupported `Content-Type` and no explicit `body` throws `EmbusError` before sending the request.
 
 ## Response
 
@@ -219,7 +222,9 @@ request.useResponseInterceptor(result => {
 });
 ```
 
-A request interceptor must return a `RequestConfig`. When a response interceptor returns a value other than `undefined`, that value replaces the current result and is passed to later response interceptors.
+A request interceptor must return a complete `RequestConfig`, including `url`. Its return value replaces the previous configuration, so omitted fields are removed. To change only some fields, return `{ ...config, ...changes }`. Embus copies and validates the configuration and applies the `GET` and `json` defaults before the first request interceptor and after each request interceptor.
+
+When a response interceptor returns a value other than `undefined`, that value replaces the current result and is passed to later response interceptors.
 
 When wrapping an API, use the function return type to declare the result after interception:
 
@@ -238,7 +243,7 @@ The request infers its final return type from `Promise<User[]>`, which must matc
 
 ## Errors
 
-Invalid arguments or URLs, and responses outside the 200–299 range throw `EmbusError`:
+Invalid Embus configuration, unsupported payload encodings, and responses outside the 200–299 range throw `EmbusError`:
 
 ```javascript
 import embus, { EmbusError } from 'embus';
@@ -252,7 +257,7 @@ try {
 }
 ```
 
-For HTTP errors, `response` is the original `Response`. Argument and URL errors do not have a `response`. Response parsing errors, network errors from `fetch`, and interceptor errors are not wrapped.
+For HTTP errors, `response` is the original `Response`. Configuration and encoding errors do not have a `response`. Native errors from URL resolution, headers, serialization, response parsing, and `fetch` (including cancellation) are not wrapped. Errors thrown by interceptors are also passed through unchanged.
 
 ## API
 

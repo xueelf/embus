@@ -1,22 +1,24 @@
 import { objectToFormData, paramsToString } from './util';
 
-/** Request configuration with all native `RequestInit` options. */
+/** 包含所有原生 `RequestInit` 选项的请求配置。 */
 export interface RequestConfig extends RequestInit {
-  /** An absolute URL or a URL relative to `origin`. */
+  /** 绝对 URL 或相对于 `origin` 的 URL。 */
   url: string;
-  /** Base URL for relative request URLs. */
+  /** 相对请求 URL 的基础地址。 */
   origin?: string;
   method?: Method;
-  /** Query parameters for GET and HEAD requests, or data to serialize for other methods. */
+  /** GET 和 HEAD 请求的查询参数，或其他请求方法待序列化的数据。 */
   payload?: object | null;
-  /** How to parse the response body. Defaults to `json`. */
+  /** 响应体的解析方式，默认为 `json`。 */
   responseType?: ResponseType;
 }
 
-/** Options accepted by instances and request method helpers. */
+/** 实例和请求方法快捷函数接受的选项。 */
 export type RequestOptions = Omit<RequestConfig, 'url' | 'method' | 'payload'>;
-export type Method = 'GET' | 'DELETE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH';
-export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'formData';
+const methods = ['GET', 'DELETE', 'HEAD', 'POST', 'PUT', 'PATCH'] as const;
+const responseTypes = ['arrayBuffer', 'blob', 'json', 'text', 'formData'] as const;
+export type Method = (typeof methods)[number];
+export type ResponseType = (typeof responseTypes)[number];
 
 export interface Result<T = unknown> {
   data: T;
@@ -26,7 +28,7 @@ export interface Result<T = unknown> {
   headers: Response['headers'];
 }
 
-/** Error type for invalid arguments or URLs, and unsuccessful HTTP responses. */
+/** Embus 配置无效或 HTTP 响应失败时的错误类型。 */
 export class EmbusError extends Error {
   constructor(
     message: string,
@@ -37,28 +39,57 @@ export class EmbusError extends Error {
   }
 }
 
-/** Reads or changes the final request configuration before the request is sent. */
+/** 发送请求前读取或修改请求配置。 */
 export type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-/** Reads the current result. A returned value replaces it. */
+/** 读取当前结果，非 undefined 返回值会替换当前结果。 */
 export type ResponseInterceptor<T = Result<unknown>> = (result: T) => unknown | Promise<unknown>;
 
-/** Applies defaults before and after request interceptors run. */
-function applyDefaults(config: RequestConfig): void {
-  config.method ??= 'GET';
-  config.responseType ??= 'json';
+/** 在请求拦截器链的每个阶段校验并复制配置。 */
+function normalizeConfig(config: RequestConfig) {
+  if (!config || typeof config !== 'object') {
+    throw new EmbusError('Invalid arguments');
+  }
+  if (typeof config.url !== 'string') {
+    throw new EmbusError('Invalid URL');
+  }
+  if (config.origin !== undefined && typeof config.origin !== 'string') {
+    throw new EmbusError('Invalid origin');
+  }
+  const method = config.method ?? 'GET';
+  const responseType = config.responseType ?? 'json';
+
+  if (!methods.includes(method)) {
+    throw new EmbusError(`Unsupported method: ${String(method)}`);
+  }
+  if (!responseTypes.includes(responseType)) {
+    throw new EmbusError(`Unsupported response type: ${String(responseType)}`);
+  }
+  if (config.payload != null && typeof config.payload !== 'object') {
+    throw new EmbusError('Invalid payload: expected an object');
+  }
+  return { ...config, method, responseType, headers: new Headers(config.headers) };
 }
 
-/** Resolves the origin and appends GET and HEAD payloads as query parameters. */
+/** 解析基础地址，并将 GET 和 HEAD 的请求数据追加为查询参数。 */
 function parseHref(config: RequestConfig): string {
-  const href = config.origin
-    ? new URL(
-        config.url,
-        config.origin.endsWith('/') ? config.origin : `${config.origin}/`,
-      ).toString()
-    : config.url;
+  let href = config.url;
+
+  if (config.origin) {
+    const origin = new URL(config.origin);
+
+    if (!origin.pathname.endsWith('/')) {
+      origin.pathname += '/';
+    }
+    href = new URL(href, origin).toString();
+  }
 
   if (config.method !== 'GET' && config.method !== 'HEAD') {
     return href;
+  }
+  if (config.payload instanceof FormData) {
+    throw new EmbusError(
+      'FormData cannot be used as query parameters. Use an object or URLSearchParams.',
+    );
   }
 
   const query = paramsToString(config.payload);
@@ -73,53 +104,54 @@ function parseHref(config: RequestConfig): string {
   return `${base}${base.includes('?') ? '&' : '?'}${query}${hash}`;
 }
 
-/** Converts non-query payloads to request bodies based on Content-Type. */
+/** 根据 Content-Type 将非 GET 和 HEAD 请求的数据转换为请求体。 */
 function parseBody(config: RequestConfig): void {
   const { body, method, payload } = config;
 
-  // null is an explicit empty body. Only undefined allows payload serialization.
+  // null 表示显式空请求体，仅 undefined 允许序列化 payload。
   if (method === 'GET' || method === 'HEAD' || body !== undefined || payload == null) {
     return;
   }
   const headers = new Headers(config.headers);
   const contentType = headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
+  const isFormData = payload instanceof FormData;
 
-  if (!contentType || contentType === 'application/json' || contentType.endsWith('+json')) {
+  if (isFormData && contentType && contentType !== 'multipart/form-data') {
+    throw new EmbusError(`FormData payload requires multipart/form-data, received ${contentType}`);
+  }
+  if (isFormData || contentType === 'multipart/form-data') {
+    config.body = isFormData ? payload : objectToFormData(payload);
+    // 由 Fetch 生成正确的 FormData 边界。
+    headers.delete('content-type');
+  } else if (!contentType || /^application\/(?:json|[^\s/;]+\+json)$/.test(contentType)) {
     config.body = JSON.stringify(payload);
 
     if (!contentType) {
       headers.set('content-type', 'application/json');
     }
-  } else if (contentType === 'multipart/form-data') {
-    config.body = objectToFormData(payload);
-    // Let Fetch generate the correct FormData boundary.
-    headers.delete('content-type');
+  } else {
+    throw new EmbusError(
+      `Unsupported payload content type: ${contentType}. Provide body directly.`,
+    );
   }
   config.headers = headers;
 }
 
-/** Parses a successful response and handles responses without a body. */
-async function parseResponse(response: Response, config: RequestConfig): Promise<unknown> {
-  if (config.method === 'HEAD' || response.status === 204 || response.status === 205) {
+/** 解析成功响应，并处理没有响应体的情况。 */
+async function parseResponse(
+  response: Response,
+  method: Method,
+  responseType: ResponseType,
+): Promise<unknown> {
+  if (method === 'HEAD' || response.status === 204 || response.status === 205) {
     return null;
   }
-  switch (config.responseType) {
-    case 'arrayBuffer':
-      return response.arrayBuffer();
-    case 'blob':
-      return response.blob();
-    case 'formData':
-      return response.formData();
-    case 'json': {
-      // response.json() throws on an empty body. Embus returns null instead.
-      const text = await response.text();
-      return text.trim() ? JSON.parse(text) : null;
-    }
-    case 'text':
-      return response.text();
-    default:
-      throw new TypeError(`Unsupported response type: ${String(config.responseType)}`);
+  if (responseType === 'json') {
+    // response.json() 遇到空响应体会抛出错误，此处返回 null。
+    const text = await response.text();
+    return text.trim() ? JSON.parse(text) : null;
   }
+  return response[responseType]();
 }
 
 export class Embus {
@@ -128,20 +160,20 @@ export class Embus {
   private readonly responseInterceptors: ResponseInterceptor<unknown>[] = [];
 
   constructor(options: RequestOptions = {}) {
-    this.options = options;
+    this.options = { ...options, headers: new Headers(options.headers) };
   }
 
-  /** Registers a request interceptor that runs in registration order. */
+  /** 注册请求拦截器，按注册顺序执行。 */
   public useRequestInterceptor(interceptor: RequestInterceptor): void {
     this.requestInterceptors.push(interceptor);
   }
 
-  /** Registers a response interceptor that runs in registration order. */
+  /** 注册响应拦截器，按注册顺序执行。 */
   public useResponseInterceptor<T = Result<unknown>>(interceptor: ResponseInterceptor<T>): void {
     this.responseInterceptors.push(interceptor as ResponseInterceptor<unknown>);
   }
 
-  /** Creates a callable instance with isolated configuration and interceptors. */
+  /** 创建配置和拦截器相互独立的可调用实例。 */
   public create(options?: RequestOptions): EmbusInstance {
     return createInstance(options);
   }
@@ -194,7 +226,7 @@ export class Embus {
     return this.request<T, R>(url, { ...options, method: 'PATCH', payload });
   }
 
-  /** Sends a request using a complete configuration object or a URL with separate options. */
+  /** 使用完整配置对象，或 URL 与独立配置发送请求。 */
   public async request<T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
   public async request<T = unknown, R = Result<T>>(
     url: string,
@@ -207,28 +239,22 @@ export class Embus {
     if (typeof init !== 'string' && (!init || typeof init !== 'object')) {
       throw new EmbusError('Invalid arguments');
     }
-    const requestConfig: RequestConfig =
+    const mergedConfig: RequestConfig =
       typeof init === 'string'
         ? { ...this.options, ...config, url: init }
         : { ...this.options, ...init };
 
-    // Instance headers provide defaults. Request headers override matching names.
+    // 实例请求头作为默认值，单次请求覆盖同名请求头。
     const headers = new Headers(this.options.headers);
 
-    for (const [key, value] of new Headers(requestConfig.headers)) {
+    for (const [key, value] of new Headers(mergedConfig.headers)) {
       headers.set(key, value);
     }
-    requestConfig.headers = headers;
-
-    if (typeof requestConfig.url !== 'string') {
-      throw new EmbusError('Invalid URL');
-    }
-    applyDefaults(requestConfig);
+    let requestConfig = normalizeConfig({ ...mergedConfig, headers });
 
     for (const interceptor of this.requestInterceptors) {
-      Object.assign(requestConfig, await interceptor(requestConfig));
+      requestConfig = normalizeConfig(await interceptor(requestConfig));
     }
-    applyDefaults(requestConfig);
     parseBody(requestConfig);
 
     const href = parseHref(requestConfig);
@@ -238,7 +264,7 @@ export class Embus {
       throw new EmbusError(`${response.status} ${response.statusText}`, response);
     }
     let result: unknown = {
-      data: await parseResponse(response, requestConfig),
+      data: await parseResponse(response, requestConfig.method, requestConfig.responseType),
       status: response.status,
       config: requestConfig,
       statusText: response.statusText,
@@ -256,16 +282,16 @@ export class Embus {
   }
 }
 
-/** A client that is both callable and exposes the `Embus` instance methods. */
-export interface EmbusInstance extends Embus {
+/** 既可直接调用，也提供 `Embus` 实例方法的客户端。 */
+export interface EmbusInstance extends Pick<Embus, keyof Embus> {
   <T = unknown, R = Result<T>>(config: RequestConfig): Promise<R>;
   <T = unknown, R = Result<T>>(url: string, config?: Omit<RequestConfig, 'url'>): Promise<R>;
 }
 
-/** Creates an independent callable client instance. */
+/** 创建独立的可调用客户端实例。 */
 export function createInstance(options: RequestOptions = {}): EmbusInstance {
   const context = new Embus(options);
-  // Bind every entry point to one context so they share configuration and interceptors.
+  // 将所有入口绑定到同一个上下文，共享配置和拦截器。
   const instance = context.request.bind(context) as EmbusInstance;
 
   instance.request = context.request.bind(context);
